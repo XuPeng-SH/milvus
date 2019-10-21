@@ -26,3 +26,10 @@ cmake_build
 *.lo
 *.tar.gz
 *.log
+
+# python related
+.coverage
+*.pyc
+cov_html/
+
+__pycache__/
