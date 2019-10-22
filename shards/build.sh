@@ -22,7 +22,7 @@ function build_image() {
 
 case "$1" in
 
-all)
+image)
     [[ -z $MISHARDS_REGISTRY ]] && {
         echo -e "${YELLOW}Error: Please set docker registry first:${ENDC}\n\t${BOLD}export MISHARDS_REGISTRY=xxxx\n${ENDC}"
         exit 1
@@ -34,6 +34,6 @@ all)
     ;;
 *)
     echo "Usage: [option...] {base | apps}"
-    echo "all,      Usage: build.sh all [tagname|] => {docker_registry}:\${tagname}"
+    echo "image,      Usage: build.sh image [tagname|] => {docker_registry}:\${tagname}"
     ;;
 esac

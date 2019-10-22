@@ -9,3 +9,5 @@ cov_html/
 __pycache__
 */__pycache__
 *.md
+*.yml
+*.yaml

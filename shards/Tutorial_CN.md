@@ -7,17 +7,17 @@ Milvus 旨在帮助用户实现海量非结构化数据的近似检索和分析�
 ---
 mishards需要运行在`python >= 3.4`环境下
 
-1. cd milvus/shards/mishards
+1. cd milvus/shards
 2. pip install -r requirements.txt
-3. nvidia-docker run --rm -d -p 19530:19530 -v /tmp/milvus/db:/opt/milvus/db registry.zilliz.com/milvus/engine:0.5.0-release-d7f1d6 #启动milvus服务,将数据目录挂载出来
-4. copy milvus/shards/mishards/.env.example to milvus/shards/mishards/.env
+3. nvidia-docker run --rm -d -p 19530:19530 -v /tmp/milvus/db:/opt/milvus/db milvusdb/milvus:0.5.0-d102119-ede20b
+4. cp mishards/.env.example to mishards/.env
 5. python mishards/main.py #.env配置mishards监听19532端口
 
 ### 使用容器快速启动
 ---
 需安装docker-compose
 
-`docker-compose -f start_services.yml up -d #监听19530端口`
+`docker-compose -f all_in_one.yml up -d #监听19530端口`
 
 ### kubernetes中快速启动
 ---
@@ -42,20 +42,20 @@ mishards需要运行在`python >= 3.4`环境下
 | TIMEZONE | No | string | "UTC" | 时区 |
 | MAX_RETRY | No | int | 3 | 最大连接重试次数 |
 | SERVER_PORT | No | int | 19530 | 配置服务端口 |
-| WOSERVER | Yes | str | - | 配置后台可写服务器地址，目前只支持静态设置，待动态注册, 划归服务发现 |
+| WOSERVER | **Yes** | str | - | 配置后台可写Milvus实例地址。目前只支持静态设置,例"tcp://127.0.0.1:19530" |
 
 ### 元数据
 | Name | Required  | Type | Default Value | Explanation |
 | --------------------------- | -------- | -------- | ------------- | ------------- |
-| SQLALCHEMY_DATABASE_URI | Yes | string | - | 配置元数据存储数据库地址 |
+| SQLALCHEMY_DATABASE_URI | **Yes** | string | - | 配置元数据存储数据库地址 |
 | SQL_ECHO | No | bool | False | 是否打印Sql详细语句 |
-| SQLALCHEMY_DATABASE_TEST_URI | Yes | string | - | 配置测试环境下元数据存储数据库地址 |
+| SQLALCHEMY_DATABASE_TEST_URI | No | string | - | 配置测试环境下元数据存储数据库地址 |
 | SQL_TEST_ECHO | No | bool | False | 配置测试环境下是否打印Sql详细语句 |
 
 ### 服务发现
 | Name | Required  | Type | Default Value | Explanation |
 | --------------------------- | -------- | -------- | ------------- | ------------- |
-| SD_PROVIDER | No | string | Static | 配置服务发现服务类型，目前只有Static, Kubernetes可选 |
+| SD_PROVIDER | No | string | "Kubernetes" | 配置服务发现服务类型，目前只有Static, Kubernetes可选 |
 | SD_STATIC_HOSTS | No | list | [] | **SD_PROVIDER** 为**Static**时，配置服务地址列表，例"192.168.1.188,192.168.1.190"|
 | SD_STATIC_PORT | No | int | 19530 | **SD_PROVIDER** 为**Static**时，配置Hosts监听端口 |
 | SD_NAMESPACE | No | string | - | **SD_PROVIDER** 为**Kubernetes**时，配置集群namespace |
