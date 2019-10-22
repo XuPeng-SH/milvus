@@ -12,6 +12,7 @@ else:
     env.read_env()
 
 DEBUG = env.bool('DEBUG', False)
+MAX_RETRY = env.int('MAX_RETRY', 3)
 
 LOG_LEVEL = env.str('LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
 LOG_PATH = env.str('LOG_PATH', '/tmp/mishards')
@@ -20,9 +21,6 @@ TIMEZONE = env.str('TIMEZONE', 'UTC')
 
 from utils.logger_helper import config
 config(LOG_LEVEL, LOG_PATH, LOG_NAME, TIMEZONE)
-
-TIMEOUT = env.int('TIMEOUT', 60)
-MAX_RETRY = env.int('MAX_RETRY', 3)
 
 SERVER_PORT = env.int('SERVER_PORT', 19530)
 SERVER_TEST_PORT = env.int('SERVER_TEST_PORT', 19530)
@@ -44,8 +42,6 @@ elif SD_PROVIDER == 'Static':
     SD_PROVIDER_SETTINGS = StaticProviderSettings(
         hosts=env.list('SD_STATIC_HOSTS', []),
         port=env.int('SD_STATIC_PORT', 19530))
-
-# TESTING_WOSERVER = env.str('TESTING_WOSERVER', 'tcp://127.0.0.1:19530')
 
 
 class TracingConfig:
@@ -83,12 +79,3 @@ class TestingConfig(DefaultConfig):
     SQL_ECHO = env.bool('SQL_TEST_ECHO', False)
     TRACING_TYPE = env.str('TRACING_TEST_TYPE', '')
     ROUTER_CLASS_NAME = env.str('ROUTER_CLASS_TEST_NAME', 'FileBasedHashRingRouter')
-
-
-if __name__ == '__main__':
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.debug('DEBUG')
-    logger.info('INFO')
-    logger.warn('WARN')
-    logger.error('ERROR')
