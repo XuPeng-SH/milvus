@@ -1,4 +1,4 @@
-![Milvuslogo](https://github.com/milvus-io/docs/blob/branch-0.5.0/assets/milvus_logo.png)
+![Milvuslogo](https://github.com/milvus-io/docs/blob/0.5.0/assets/milvus_logo.png)
 
 ![LICENSE](https://img.shields.io/badge/license-Apache--2.0-brightgreen)
 ![Language](https://img.shields.io/badge/language-C%2B%2B-blue)
@@ -6,6 +6,7 @@
 
 - [Slack Community](https://join.slack.com/t/milvusio/shared_invite/enQtNzY1OTQ0NDI3NjMzLWNmYmM1NmNjOTQ5MGI5NDhhYmRhMGU5M2NhNzhhMDMzY2MzNDdlYjM5ODQ5MmE3ODFlYzU3YjJkNmVlNDQ2ZTk)
 - [Twitter](https://twitter.com/milvusio)
+- [Facebook](https://www.facebook.com/io.milvus.5)
 - [Blog](https://www.milvus.io/blog/)
 - [CSDN](https://zilliz.blog.csdn.net/)
 - [中文官网](https://www.milvus.io/zh-CN/)
@@ -40,7 +41,7 @@ Keep up-to-date with newest releases and latest updates by reading Milvus [relea
   Milvus expands computation and storage by adding nodes during runtime, which allows you to scale the data size without redesigning the system.
 
 ## Architecture
-![Milvus_arch](https://github.com/milvus-io/docs/blob/branch-0.5.0/assets/milvus_arch.jpg)
+![Milvus_arch](https://github.com/milvus-io/docs/blob/0.5.0/assets/milvus_arch.jpg)
 
 ## Get started
 
@@ -111,7 +112,7 @@ To stop Milvus server, run:
 $ ./stop_server.sh
 ```
 
-To edit Milvus settings in `conf/server_config.yaml` and `conf/log_config.conf`, please read [Milvus Configuration](https://www.milvus-io/docs/master/reference/milvus_config.md).
+To edit Milvus settings in `conf/server_config.yaml` and `conf/log_config.conf`, please read [Milvus Configuration](https://github.com/milvus-io/docs/blob/master/reference/milvus_config.md).
 
 ### Try your first Milvus program
 
@@ -179,4 +180,5 @@ Please read our [roadmap](https://milvus.io/docs/en/roadmap/) to learn about upc
 
 ## License
 
-[Apache 2.0 license](milvus-io/milvus/LICENSE.md)
+[Apache 2.0 license](LICENSE)
+
