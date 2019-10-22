@@ -1,37 +1,68 @@
 # Mishards使用文档
+---
 Milvus 旨在帮助用户实现海量非结构化数据的近似检索和分析。单个 Milvus 实例可处理十亿级数据规模，而对于百亿或者千亿规模数据的需求，则需要一个 Milvus 集群实例，该实例对于上层应用可以像单机实例一样使用，同时满足海量数据低延迟，高并发业务需求。mishards就是一个集群中间件，其内部处理请求转发，读写分离，水平扩展，动态扩容，为用户提供内存和算力可以无限扩容的 Milvus 实例。
 
 ## 运行环境
-
-### 单机快速启动
 ---
-mishards需要运行在`python >= 3.4`环境下
 
+### 单机快速启动实例
+**`python >= 3.4`环境**
+
+```
 1. cd milvus/shards
 2. pip install -r requirements.txt
 3. nvidia-docker run --rm -d -p 19530:19530 -v /tmp/milvus/db:/opt/milvus/db milvusdb/milvus:0.5.0-d102119-ede20b
 4. cp mishards/.env.example to mishards/.env
-5. python mishards/main.py #.env配置mishards监听19532端口
+5. 在python mishards/main.py #.env配置mishards监听19532端口
+```
 
-### 使用容器快速启动
----
-需安装docker-compose
+### 容器启动实例
+**安装docker-compose**
 
-`docker-compose -f all_in_one.yml up -d #监听19530端口`
+`all_in_one`会在服务器上开启两个milvus实例，一个mishards实例，一个jaeger链路追踪实例
+
+```
+1. cd milvus/shards/all_in_one
+2. docker-compose -f all_in_one.yml up -d #监听19530端口
+```
+
+**打开Jaeger UI**
+```
+浏览器打开 "http://127.0.0.1:16686/"
+```
 
 ### kubernetes中快速启动
 ---
-#### 前提
+**准备**
+```
 - kubernetes集群
 - 安装nvidia-docker
 - 共享存储
 - 安装kubectl并能访问集群
+```
 
-#### 步骤
-1. cd milvus/shards/mishards/
-2. ./start_cluster.sh allup
+**步骤**
+```
+1. cd milvus/shards/kubernetes_demo/
+2. ./start.sh allup
 3. watch -n 1 kubectl get pods -n milvus -o wide 查看所有pod状态，等待所有pod都处于Runing状态
 4. kubectl get service -n milvus 查看milvus-proxy-servers的EXTERNAL-IP和PORT, 这就是mishards集群的服务地址
+```
+
+**扩容计算实例**
+```
+./start.sh scale-ro-server 2 扩容计算实例到2
+```
+
+**扩容代理器实例**
+```
+./start.sh scale-proxy 2 扩容代理服务器实例到2
+```
+
+**查看日志**
+```
+kubectl logs -f --tail=1000 -n milvus milvus-ro-servers-0 查看计算节点milvus-ro-servers-0日志
+```
 
 ## mishards配置详解
 

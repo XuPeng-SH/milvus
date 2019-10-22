@@ -1,13 +1,19 @@
 version: "2.3"
 services:
-    milvus:
+    milvus_wr:
         runtime: nvidia
         restart: always
         image: milvusdb/milvus:0.5.0-d102119-ede20b
-        # ports:
-        #     - "0.0.0.0:19530:19530"
         volumes:
             - /tmp/milvus/db:/opt/milvus/db
+
+    milvus_ro:
+        runtime: nvidia
+        restart: always
+        image: milvusdb/milvus:0.5.0-d102119-ede20b
+        volumes:
+            - /tmp/milvus/db:/opt/milvus/db
+            - ./ro_server.yml:/opt/milvus/conf/server_config.yaml
 
     jaeger:
         restart: always
@@ -23,7 +29,7 @@ services:
         restart: always
         image: milvusdb/mishards:0.1.0-rc0
         ports:
-            - "0.0.0.0:19530:19531"
+            - "0.0.0.0:19531:19531"
             - "0.0.0.0:19532:19532"
         volumes:
             - /tmp/milvus/db:/tmp/milvus/db
@@ -33,13 +39,14 @@ services:
             FROM_EXAMPLE: 'true'
             DEBUG: 'true'
             SERVER_PORT: 19531
-            WOSERVER: tcp://milvus:19530
-            SD_STATIC_HOSTS: milvus
+            WOSERVER: tcp://milvus_wr:19530
+            SD_STATIC_HOSTS: milvus_wr,milvus_ro
             TRACING_TYPE: jaeger
             TRACING_SERVICE_NAME: mishards-demo
             TRACING_REPORTING_HOST: jaeger
             TRACING_REPORTING_PORT: 5775
 
         depends_on:
-            - milvus
+            - milvus_wr
+            - milvus_ro
             - jaeger
