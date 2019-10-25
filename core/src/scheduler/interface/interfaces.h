@@ -14,16 +14,31 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+#pragma once
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include <condition_variable>
+#include <deque>
+#include <list>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <vector>
 
-#include "external/easyloggingpp/easylogging++.h"
+#include "utils/Json.h"
 
-INITIALIZE_EASYLOGGINGPP
+namespace milvus {
+namespace interface {
 
-int
-main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+struct dumpable {
+    virtual ~dumpable() {
+    }
+
+    virtual json
+    Dump() = 0;
+};
+
+}  // namespace interface
+}  // namespace milvus

@@ -14,16 +14,10 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+#pragma once
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
+#include "external/nlohmann/json.hpp"
 
-#include "external/easyloggingpp/easylogging++.h"
-
-INITIALIZE_EASYLOGGINGPP
-
-int
-main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+namespace milvus {
+using json = nlohmann::json;
 }
