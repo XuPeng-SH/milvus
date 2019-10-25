@@ -12,8 +12,10 @@ Milvus 旨在帮助用户实现海量非结构化数据的近似检索和分析�
 1. cd milvus/shards
 2. pip install -r requirements.txt
 3. nvidia-docker run --rm -d -p 19530:19530 -v /tmp/milvus/db:/opt/milvus/db milvusdb/milvus:0.5.0-d102119-ede20b
-4. cp mishards/.env.example to mishards/.env
-5. 在python mishards/main.py #.env配置mishards监听19532端口
+4. sudo chown -R $USER:$USER /tmp/milvus
+5. cp mishards/.env.example to mishards/.env
+6
+7. 在python mishards/main.py #.env配置mishards监听19532端口
 ```
 
 ### 容器启动实例
@@ -23,7 +25,7 @@ Milvus 旨在帮助用户实现海量非结构化数据的近似检索和分析�
 ```
 1. 安装docker-compose
 1. cd milvus/shards/all_in_one
-2. docker-compose -f all_in_one.yml up -d #监听19530端口
+2. docker-compose -f all_in_one.yml up -d #监听19531端口
 ```
 
 **打开Jaeger UI**
