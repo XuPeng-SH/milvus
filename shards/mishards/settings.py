@@ -27,9 +27,6 @@ SERVER_PORT = env.int('SERVER_PORT', 19530)
 SERVER_TEST_PORT = env.int('SERVER_TEST_PORT', 19530)
 WOSERVER = env.str('WOSERVER')
 
-DISCOVERY_STATIC_HOSTS = env.list('DISCOVERY_STATIC_HOSTS', [])
-DISCOVERY_STATIC_PORT = env.int('DISCOVERY_STATIC_PORT', 19530)
-
 
 class TracingConfig:
     TRACING_SERVICE_NAME = env.str('TRACING_SERVICE_NAME', 'mishards')
@@ -68,5 +65,5 @@ class DefaultConfig:
 class TestingConfig(DefaultConfig):
     SQLALCHEMY_DATABASE_URI = env.str('SQLALCHEMY_DATABASE_TEST_URI', '')
     SQL_ECHO = env.bool('SQL_TEST_ECHO', False)
-    TRACING_TYPE = env.str('TRACING_TEST_TYPE', '')
+    TRACER_CLASS_NAME = env.str('TRACER_CLASS_TEST_NAME', '')
     ROUTER_CLASS_NAME = env.str('ROUTER_CLASS_TEST_NAME', 'FileBasedHashRingRouter')
