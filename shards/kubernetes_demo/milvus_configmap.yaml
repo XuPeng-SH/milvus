@@ -36,9 +36,12 @@ data:
       WOSERVER=tcp://milvus-wo-servers:19530
       SERVER_PORT=19530
 
-      SD_IN_CLUSTER=True
-      SD_POLL_INTERVAL=20
-      SD_LABEL_SELECTOR=tier=ro-servers
+      DISCOVERY_CLASS_NAME=kubernetes
+      DISCOVERY_KUBERNETES_NAMESPACE=milvus
+      DISCOVERY_KUBERNETES_POD_PATT=.*-ro-servers-.*
+      DISCOVERY_KUBERNETES_LABEL_SELECTOR=tier=ro-servers
+      DISCOVERY_KUBERNETES_POLL_INTERVAL=10
+      DISCOVERY_KUBERNETES_IN_CLUSTER=True
 
       SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:milvusroot@milvus-mysql:3306/milvus?charset=utf8mb4
       SQLALCHEMY_POOL_SIZE=50
