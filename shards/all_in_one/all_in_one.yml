@@ -27,7 +27,7 @@ services:
 
     mishards:
         restart: always
-        image: milvusdb/mishards:0.1.0-rc0
+        image: milvusdb/mishards
         ports:
             - "0.0.0.0:19531:19531"
             - "0.0.0.0:19532:19532"
