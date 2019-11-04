@@ -4,6 +4,7 @@ RED = '\033[0;31m'
 GREEN = '\033[0;32m'
 ENDC = ''
 
+
 def test(host='127.0.0.1', port=19531):
     client = Milvus()
     try:
