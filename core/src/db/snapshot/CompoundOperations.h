@@ -80,8 +80,8 @@ class CreateCollectionOperation : public Operations {
     Status
     DoExecute(Store&) override;
 
-    ScopedSnapshotT
-    GetSnapshot() const override;
+    Status
+    GetSnapshot(ScopedSnapshotT& ss) const override;
 
  private:
     CreateCollectionContext context_;

@@ -105,7 +105,7 @@ class LoadOperation<Collection> : public Operations {
         if (done_) return status_;
         Status status;
         if (context_.id == 0 && context_.name != "") {
-            resource_ = store.GetCollection(context_.name);
+            status = store.GetCollection(context_.name, resource_);
         } else {
             status = store.GetResource<Collection>(context_.id, resource_);
         }

@@ -100,7 +100,6 @@ class Store {
     template <typename ResourceT>
     Status
     GetResource(ID_TYPE id, typename ResourceT::Ptr& return_v) {
-        return_v = nullptr;
         auto& resources = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
@@ -112,16 +111,16 @@ class Store {
         return Status::OK();
     }
 
-    CollectionPtr
-    GetCollection(const std::string& name) {
+    Status
+    GetCollection(const std::string& name, CollectionPtr& return_v) {
         auto it = name_collections_.find(name);
         if (it == name_collections_.end()) {
-            return nullptr;
+            return Status(40012, "DB resource not found");
         }
         auto& c = it->second;
-        auto ret = std::make_shared<Collection>(*c);
+        return_v = std::make_shared<Collection>(*c);
         std::cout << "<<< [Load] Collection " << name << std::endl;
-        return ret;
+        return Status::OK();
     }
 
     bool

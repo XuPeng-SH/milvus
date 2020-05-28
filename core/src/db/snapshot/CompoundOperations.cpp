@@ -304,13 +304,17 @@ CreateCollectionOperation::DoExecute(Store& store) {
     return Status::OK();
 }
 
-ScopedSnapshotT
-CreateCollectionOperation::GetSnapshot() const {
+Status
+CreateCollectionOperation::GetSnapshot(ScopedSnapshotT& ss) const {
+    if (!done_) {
+        return Status(40031, "Operation is not done");
+    }
     if (ids_.size() == 0)
-        return ScopedSnapshotT();
+        return Status(40032, "No Snapshot is available");
     if (!context_.collection_commit)
-        return ScopedSnapshotT();
-    return Snapshots::GetInstance().GetSnapshot(context_.collection_commit->GetCollectionId());
+        return Status(40032, "No Snapshot is available");
+    ss = Snapshots::GetInstance().GetSnapshot(context_.collection_commit->GetCollectionId());
+    return Status::OK();
 }
 
 Status

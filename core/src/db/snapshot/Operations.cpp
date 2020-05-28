@@ -76,12 +76,16 @@ Operations::IsStale() const {
     return true;
 }
 
-ScopedSnapshotT
-Operations::GetSnapshot() const {
+Status
+Operations::GetSnapshot(ScopedSnapshotT& ss) const {
     // PXU TODO: Check is result ready or valid
+    if (!done_) {
+        return Status(40031, "Operation is not done");
+    }
     if (ids_.size() == 0)
-        return ScopedSnapshotT();
-    return Snapshots::GetInstance().GetSnapshot(prev_ss_->GetCollectionId(), ids_.back());
+        return Status(40032, "No Snapshot is available");
+    ss = Snapshots::GetInstance().GetSnapshot(prev_ss_->GetCollectionId(), ids_.back());
+    return Status::OK();
 }
 
 Status

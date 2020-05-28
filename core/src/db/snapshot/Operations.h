@@ -68,8 +68,8 @@ class Operations : public std::enable_shared_from_this<Operations> {
     virtual Status
     PostExecute(Store&);
 
-    virtual ScopedSnapshotT
-    GetSnapshot() const;
+    virtual Status
+    GetSnapshot(ScopedSnapshotT& ss) const;
 
     virtual Status
     operator()(Store& store);

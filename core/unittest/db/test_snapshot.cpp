@@ -144,7 +144,8 @@ CreateCollection(const std::string& collection_name) {
 
     auto op = std::make_shared<milvus::engine::snapshot::CreateCollectionOperation>(context);
     op->Push();
-    auto ss = op->GetSnapshot();
+    milvus::engine::snapshot::ScopedSnapshotT ss;
+    auto status = op->GetSnapshot(ss);
     return ss;
 }
 
@@ -232,6 +233,8 @@ TEST_F(SnapshotTest, OperationTest) {
         milvus::engine::snapshot::OperationContext merge_ctx;
         std::set<milvus::engine::snapshot::ID_TYPE> stale_segment_commit_ids;
 
+        milvus::Status status;
+
         // Check build operation correctness
         {
             milvus::engine::snapshot::OperationContext context;
@@ -243,7 +246,7 @@ TEST_F(SnapshotTest, OperationTest) {
             ASSERT_NE(prev_segment_commit->ToString(), "");
 
             build_op->Push();
-            ss = build_op->GetSnapshot();
+            status = build_op->GetSnapshot(ss);
             ASSERT_TRUE(ss->GetID() > ss_id);
 
             auto segment_commit = ss->GetSegmentCommit(seg_file->GetSegmentId());
@@ -276,7 +279,7 @@ TEST_F(SnapshotTest, OperationTest) {
             auto seg_file = op->CommitNewSegmentFile(sf_context);
             op->Push();
 
-            ss = op->GetSnapshot();
+            status = op->GetSnapshot(ss);
             ASSERT_TRUE(ss->GetID() > ss_id);
 
             auto segment_commit = ss->GetSegmentCommit(seg_file->GetSegmentId());
@@ -302,7 +305,7 @@ TEST_F(SnapshotTest, OperationTest) {
             sf_context.segment_id = new_seg->GetID();
             auto seg_file = op->CommitNewSegmentFile(sf_context);
             op->Push();
-            ss = op->GetSnapshot();
+            status = op->GetSnapshot(ss);
             ASSERT_TRUE(ss->GetID() > ss_id);
 
             auto segment_commit = ss->GetSegmentCommit(new_seg->GetID());
