@@ -60,7 +60,14 @@ Operations::Done() {
 }
 
 Status
+Operations::PreCheck() {
+    return Status::OK();
+}
+
+Status
 Operations::Push(bool sync) {
+    auto status = PreCheck();
+    if (!status.ok()) return status;
     return OperationExecutor::GetInstance().Submit(shared_from_this(), sync);
 }
 

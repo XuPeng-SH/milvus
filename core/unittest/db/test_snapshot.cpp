@@ -216,6 +216,7 @@ TEST_F(SnapshotTest, DropCollectionTest) {
 
 TEST_F(SnapshotTest, OperationTest) {
     {
+        milvus::Status status;
         std::string to_string;
         milvus::engine::snapshot::SegmentFileContext sf_context;
         sf_context.field_name = "f_1_1";
@@ -224,8 +225,9 @@ TEST_F(SnapshotTest, OperationTest) {
         sf_context.partition_id = 1;
 
         milvus::engine::snapshot::ScopedSnapshotT ss;
-        auto status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(ss, 1);
+        status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(ss, 1);
         auto ss_id = ss->GetID();
+        ASSERT_TRUE(status.ok());
 
         // Check snapshot
         {
@@ -278,13 +280,19 @@ TEST_F(SnapshotTest, OperationTest) {
             milvus::engine::snapshot::OperationContext context;
             context.prev_partition = ss->GetResource<milvus::engine::snapshot::Partition>(1);
             auto op = std::make_shared<milvus::engine::snapshot::NewSegmentOperation>(context, ss);
-            auto new_seg = op->CommitNewSegment();
+            milvus::engine::snapshot::SegmentPtr new_seg;
+            status = op->CommitNewSegment(new_seg);
+            ASSERT_TRUE(status.ok());
             ASSERT_NE(new_seg->ToString(), "");
-            auto seg_file = op->CommitNewSegmentFile(sf_context);
-            op->Push();
+            milvus::engine::snapshot::SegmentFilePtr seg_file;
+            status = op->CommitNewSegmentFile(sf_context, seg_file);
+            ASSERT_TRUE(status.ok());
+            status = op->Push();
+            ASSERT_TRUE(status.ok());
 
             status = op->GetSnapshot(ss);
             ASSERT_TRUE(ss->GetID() > ss_id);
+            ASSERT_TRUE(status.ok());
 
             auto segment_commit = ss->GetSegmentCommit(seg_file->GetSegmentId());
             auto segment_commit_mappings = segment_commit->GetMappings();

@@ -120,6 +120,9 @@ NewSegmentOperation::PreExecute(Store& store) {
     // PXU TODO:
     // 1. Check all requried field elements have related segment files
     // 2. Check Stale and others
+    /* auto status = PrevSnapshotRequried(); */
+    /* if (!status.ok()) return status; */
+    // TODO: Check Context
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
     auto status = op.GetResource(context_.new_segment_commit);
@@ -152,30 +155,30 @@ NewSegmentOperation::PreExecute(Store& store) {
     return status;
 }
 
-SegmentPtr
-NewSegmentOperation::CommitNewSegment() {
+Status
+NewSegmentOperation::CommitNewSegment(SegmentPtr& created) {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
     OperationExecutor::GetInstance().Submit(op);
     op->WaitToFinish();
     auto status = op->GetResource(context_.new_segment);
-    if (!status.ok()) return nullptr;
-    return context_.new_segment;
+    if (!status.ok()) return status;
+    created = context_.new_segment;
+    return status;
 }
 
-SegmentFilePtr
-NewSegmentOperation::CommitNewSegmentFile(const SegmentFileContext& context) {
+Status
+NewSegmentOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created) {
     auto c = context;
     c.segment_id = context_.new_segment->GetID();
     c.partition_id = context_.new_segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
     OperationExecutor::GetInstance().Submit(new_sf_op);
     new_sf_op->WaitToFinish();
-    SegmentFilePtr sf;
-    auto status = new_sf_op->GetResource(sf);
-    if (!status.ok()) return nullptr;
+    auto status = new_sf_op->GetResource(created);
+    if (!status.ok()) return status;
 
-    context_.new_segment_files.push_back(sf);
-    return sf;
+    context_.new_segment_files.push_back(created);
+    return status;
 }
 
 MergeOperation::MergeOperation(const OperationContext& context, ScopedSnapshotT prev_ss) : BaseT(context, prev_ss) {

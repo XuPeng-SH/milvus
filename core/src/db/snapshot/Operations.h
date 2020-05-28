@@ -77,6 +77,9 @@ class Operations : public std::enable_shared_from_this<Operations> {
     Push(bool sync = true);
 
     virtual Status
+    PreCheck();
+
+    virtual Status
     ApplyToStore(Store& store);
 
     Status
