@@ -33,25 +33,25 @@ class Snapshots {
         static Snapshots sss;
         return sss;
     }
-    SnapshotHolderPtr
-    GetHolder(ID_TYPE collection_id);
-    SnapshotHolderPtr
-    GetHolder(const std::string& name);
+    Status
+    GetHolder(ID_TYPE collection_id, SnapshotHolderPtr& holder);
+    Status
+    GetHolder(const std::string& name, SnapshotHolderPtr& holder);
 
-    ScopedSnapshotT
-    GetSnapshot(ID_TYPE collection_id, ID_TYPE id = 0, bool scoped = true);
-    ScopedSnapshotT
-    GetSnapshot(const std::string& name, ID_TYPE id = 0, bool scoped = true);
+    Status
+    GetSnapshot(ScopedSnapshotT& ss, ID_TYPE collection_id, ID_TYPE id = 0, bool scoped = true);
+    Status
+    GetSnapshot(ScopedSnapshotT& ss, const std::string& name, ID_TYPE id = 0, bool scoped = true);
 
-    IDS_TYPE
-    GetCollectionIds() const;
+    Status
+    GetCollectionIds(IDS_TYPE& ids) const;
 
     Status
     DropCollection(const std::string& name);
     Status
     DropCollection(ID_TYPE collection_id);
 
-    void
+    Status
     Reset();
 
  private:
@@ -65,13 +65,12 @@ class Snapshots {
     void
     Init();
 
-    mutable std::shared_timed_mutex mutex_;
-    SnapshotHolderPtr
-    LoadNoLock(ID_TYPE collection_id);
-    /* SnapshotHolderPtr Load(ID_TYPE collection_id); */
-    SnapshotHolderPtr
-    GetHolderNoLock(ID_TYPE collection_id);
+    Status
+    LoadNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder);
+    Status
+    GetHolderNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder);
 
+    mutable std::shared_timed_mutex mutex_;
     std::map<ID_TYPE, SnapshotHolderPtr> holders_;
     std::map<std::string, ID_TYPE> name_id_map_;
     std::vector<Snapshot::Ptr> to_release_;

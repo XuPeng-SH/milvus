@@ -18,17 +18,20 @@ namespace snapshot {
 
 Status
 Snapshots::DropCollection(ID_TYPE collection_id) {
-    auto ss = GetSnapshot(collection_id);
-    if (!ss)
-        return Status(40004, "Collection not found");
+    ScopedSnapshotT ss;
+    auto status = GetSnapshot(ss, collection_id);
+    if (!status.ok())
+        return status;
+        /* return Status(40004, "Collection not found"); */
     return DoDropCollection(ss);
 }
 
 Status
 Snapshots::DropCollection(const std::string& name) {
-    auto ss = GetSnapshot(name);
-    if (!ss)
-        return Status(40004, "Collection not found");
+    ScopedSnapshotT ss;
+    auto status = GetSnapshot(ss, name);
+    if (!status.ok())
+        return status;
     return DoDropCollection(ss);
 }
 
@@ -46,46 +49,49 @@ Snapshots::DoDropCollection(ScopedSnapshotT& ss) {
     return status;
 }
 
-ScopedSnapshotT
-Snapshots::GetSnapshot(ID_TYPE collection_id, ID_TYPE id, bool scoped) {
-    auto holder = GetHolder(collection_id);
-    if (!holder)
-        return ScopedSnapshotT();
-    return holder->GetSnapshot(id, scoped);
+Status
+Snapshots::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE collection_id, ID_TYPE id, bool scoped) {
+    SnapshotHolderPtr holder;
+    auto status = GetHolder(collection_id, holder);
+    if (!status.ok())
+        return status;
+    ss = holder->GetSnapshot(id, scoped);
+    return Status::OK();
 }
 
-ScopedSnapshotT
-Snapshots::GetSnapshot(const std::string& name, ID_TYPE id, bool scoped) {
-    auto holder = GetHolder(name);
-    if (!holder)
-        return ScopedSnapshotT();
-    return holder->GetSnapshot(id, scoped);
+Status
+Snapshots::GetSnapshot(ScopedSnapshotT& ss, const std::string& name, ID_TYPE id, bool scoped) {
+    SnapshotHolderPtr holder;
+    auto status = GetHolder(name, holder);
+    if (!status.ok())
+        return status;
+    ss = holder->GetSnapshot(id, scoped);
+    return Status::OK();
 }
 
-IDS_TYPE
-Snapshots::GetCollectionIds() const {
-    IDS_TYPE ids;
+Status
+Snapshots::GetCollectionIds(IDS_TYPE& ids) const {
     std::shared_lock<std::shared_timed_mutex> lock(mutex_);
     for (auto& kv : holders_) {
         ids.push_back(kv.first);
     }
-    return ids;
+    return Status::OK();
 }
 
-SnapshotHolderPtr
-Snapshots::LoadNoLock(ID_TYPE collection_id) {
+Status
+Snapshots::LoadNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
     auto op = std::make_shared<GetSnapshotIDsOperation>(collection_id, false);
     op->Push();
     auto& collection_commit_ids = op->GetIDs();
     if (collection_commit_ids.size() == 0) {
-        return nullptr;
+        return Status(40030, "No collection commit found");
     }
-    auto holder = std::make_shared<SnapshotHolder>(
+    holder = std::make_shared<SnapshotHolder>(
         collection_id, std::bind(&Snapshots::SnapshotGCCallback, this, std::placeholders::_1));
     for (auto c_c_id : collection_commit_ids) {
         holder->Add(c_c_id);
     }
-    return holder;
+    return Status::OK();
 }
 
 void
@@ -93,19 +99,20 @@ Snapshots::Init() {
     auto op = std::make_shared<GetCollectionIDsOperation>();
     op->Push();
     auto& collection_ids = op->GetIDs();
+    SnapshotHolderPtr holder;
     for (auto collection_id : collection_ids) {
-        GetHolder(collection_id);
+        GetHolder(collection_id, holder);
     }
 }
 
-SnapshotHolderPtr
-Snapshots::GetHolder(const std::string& name) {
+Status
+Snapshots::GetHolder(const std::string& name, SnapshotHolderPtr& holder) {
     {
         std::unique_lock<std::shared_timed_mutex> lock(mutex_);
         auto kv = name_id_map_.find(name);
         if (kv != name_id_map_.end()) {
             lock.unlock();
-            return GetHolder(kv->second);
+            return GetHolder(kv->second, holder);
         }
     }
     LoadOperationContext context;
@@ -114,43 +121,46 @@ Snapshots::GetHolder(const std::string& name) {
     op->Push();
     auto c = op->GetResource();
     if (!c)
-        return nullptr;
-    return GetHolder(c->GetID());
+        return Status(40033, "No Specified Collection");
+    return GetHolder(c->GetID(), holder);
 }
 
-SnapshotHolderPtr
-Snapshots::GetHolder(ID_TYPE collection_id) {
+Status
+Snapshots::GetHolder(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
+    Status status;
     {
         std::unique_lock<std::shared_timed_mutex> lock(mutex_);
-        auto holder = GetHolderNoLock(collection_id);
-        if (holder)
-            return holder;
+        status = GetHolderNoLock(collection_id, holder);
+        if (status.ok() && holder)
+            return status;
     }
-    auto holder = LoadNoLock(collection_id);
-    if (!holder)
-        return nullptr;
+    status = LoadNoLock(collection_id, holder);
+    if (!status.ok())
+        return status;
 
     std::unique_lock<std::shared_timed_mutex> lock(mutex_);
     holders_[collection_id] = holder;
     name_id_map_[holder->GetSnapshot()->GetName()] = collection_id;
-    return holder;
+    return Status::OK();
 }
 
-SnapshotHolderPtr
-Snapshots::GetHolderNoLock(ID_TYPE collection_id) {
+Status
+Snapshots::GetHolderNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
     auto it = holders_.find(collection_id);
     if (it == holders_.end()) {
-        return nullptr;
+        return Status(40040, "Specified snapshot holder not found");
     }
-    return it->second;
+    holder = it->second;
+    return Status::OK();
 }
 
-void
+Status
 Snapshots::Reset() {
     std::unique_lock<std::shared_timed_mutex> lock(mutex_);
     holders_.clear();
     name_id_map_.clear();
     to_release_.clear();
+    return Status();
 }
 
 void

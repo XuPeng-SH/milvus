@@ -313,8 +313,8 @@ CreateCollectionOperation::GetSnapshot(ScopedSnapshotT& ss) const {
         return Status(40032, "No Snapshot is available");
     if (!context_.collection_commit)
         return Status(40032, "No Snapshot is available");
-    ss = Snapshots::GetInstance().GetSnapshot(context_.collection_commit->GetCollectionId());
-    return Status::OK();
+    auto status = Snapshots::GetInstance().GetSnapshot(ss, context_.collection_commit->GetCollectionId());
+    return status;
 }
 
 Status

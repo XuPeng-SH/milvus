@@ -151,20 +151,23 @@ CreateCollection(const std::string& collection_name) {
 
 TEST_F(SnapshotTest, CreateCollectionOperationTest) {
     milvus::engine::snapshot::Store::GetInstance().DoReset();
-    auto expect_null = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(100000);
+    milvus::engine::snapshot::ScopedSnapshotT expect_null;
+    auto status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(expect_null, 100000);
     ASSERT_TRUE(!expect_null);
 
     std::string collection_name = "test_c1";
     auto ss = CreateCollection(collection_name);
 
-    auto latest_ss = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot("xxxx");
+    milvus::engine::snapshot::ScopedSnapshotT latest_ss;
+    status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(latest_ss, "xxxx");
     ASSERT_TRUE(!latest_ss);
 
-    latest_ss = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(collection_name);
+    status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(latest_ss, collection_name);
     ASSERT_TRUE(latest_ss);
     ASSERT_TRUE(latest_ss->GetName() == collection_name);
 
-    auto ids = milvus::engine::snapshot::Snapshots::GetInstance().GetCollectionIds();
+    milvus::engine::snapshot::IDS_TYPE ids;
+    status = milvus::engine::snapshot::Snapshots::GetInstance().GetCollectionIds(ids);
     ASSERT_EQ(ids.size(), 1);
     ASSERT_EQ(ids[0], latest_ss->GetCollectionId());
 
@@ -186,19 +189,21 @@ TEST_F(SnapshotTest, DropCollectionTest) {
         std::string collection_name = "test_c1";
         auto ss = CreateCollection(collection_name);
         ASSERT_TRUE(ss);
-        auto lss = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(collection_name);
+        milvus::engine::snapshot::ScopedSnapshotT lss;
+        auto status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(lss, collection_name);
+        ASSERT_TRUE(status.ok());
         ASSERT_TRUE(lss);
         ASSERT_EQ(ss->GetID(), lss->GetID());
         auto prev_ss_id = ss->GetID();
         auto prev_c_id = ss->GetCollection()->GetID();
-        auto status = milvus::engine::snapshot::Snapshots::GetInstance().DropCollection(collection_name);
+        status = milvus::engine::snapshot::Snapshots::GetInstance().DropCollection(collection_name);
         ASSERT_TRUE(status.ok());
-        lss = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(collection_name);
-        ASSERT_TRUE(!lss);
+        status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(lss, collection_name);
+        ASSERT_TRUE(!status.ok());
 
         auto ss_2 = CreateCollection(collection_name);
-        lss = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(collection_name);
-        ASSERT_TRUE(lss);
+        status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(lss, collection_name);
+        ASSERT_TRUE(status.ok());
         ASSERT_EQ(ss_2->GetID(), lss->GetID());
         ASSERT_TRUE(prev_ss_id != ss_2->GetID());
         ASSERT_TRUE(prev_c_id != ss_2->GetCollection()->GetID());
@@ -218,7 +223,8 @@ TEST_F(SnapshotTest, OperationTest) {
         sf_context.segment_id = 1;
         sf_context.partition_id = 1;
 
-        auto ss = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(1);
+        milvus::engine::snapshot::ScopedSnapshotT ss;
+        auto status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(ss, 1);
         auto ss_id = ss->GetID();
 
         // Check snapshot
@@ -232,8 +238,6 @@ TEST_F(SnapshotTest, OperationTest) {
 
         milvus::engine::snapshot::OperationContext merge_ctx;
         std::set<milvus::engine::snapshot::ID_TYPE> stale_segment_commit_ids;
-
-        milvus::Status status;
 
         // Check build operation correctness
         {

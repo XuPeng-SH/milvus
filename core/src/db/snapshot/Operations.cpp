@@ -25,8 +25,9 @@ Operations::Operations(const OperationContext& context, ScopedSnapshotT prev_ss)
 }
 
 Operations::Operations(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id)
-    : context_(context), prev_ss_(Snapshots::GetInstance().GetSnapshot(collection_id, commit_id)),
-      uid_(UID++), status_(40005, "Operation Pending") {
+    : context_(context), uid_(UID++), status_(40005, "Operation Pending") {
+    auto status = Snapshots::GetInstance().GetSnapshot(prev_ss_, collection_id, commit_id);
+    if (!status.ok()) prev_ss_ = ScopedSnapshotT();
 }
 
 ID_TYPE
@@ -68,7 +69,9 @@ Operations::Push(bool sync) {
 
 bool
 Operations::IsStale() const {
-    auto curr_ss = Snapshots::GetInstance().GetSnapshot(prev_ss_->GetCollectionId());
+    ScopedSnapshotT curr_ss;
+    auto status = Snapshots::GetInstance().GetSnapshot(curr_ss, prev_ss_->GetCollectionId());
+    if (!status.ok()) return true;
     if (prev_ss_->GetID() == curr_ss->GetID()) {
         return false;
     }
@@ -84,8 +87,8 @@ Operations::GetSnapshot(ScopedSnapshotT& ss) const {
     }
     if (ids_.size() == 0)
         return Status(40032, "No Snapshot is available");
-    ss = Snapshots::GetInstance().GetSnapshot(prev_ss_->GetCollectionId(), ids_.back());
-    return Status::OK();
+    auto status = Snapshots::GetInstance().GetSnapshot(ss, prev_ss_->GetCollectionId(), ids_.back());
+    return status;
 }
 
 Status
