@@ -88,15 +88,18 @@ class Operations : public std::enable_shared_from_this<Operations> {
     void
     Done();
 
-    void SetStatus(const Status& status);
+    void
+    SetStatus(const Status& status);
 
-    Status GetStatus() const { return status_; }
+    Status
+    GetStatus() const {
+        return status_;
+    }
 
     virtual ~Operations() {
     }
 
  protected:
-
     Status
     DoneRequired() const;
     Status
@@ -145,9 +148,11 @@ class CommitOperation : public Operations {
             WaitToFinish();
         }
         auto status = DoneRequired();
-        if (!status.ok()) return status;
+        if (!status.ok())
+            return status;
         status = IDSNotEmptyRequried();
-        if (!status.ok()) return status;
+        if (!status.ok())
+            return status;
         resource_->SetID(ids_[0]);
         res = resource_;
         return status;
@@ -157,7 +162,8 @@ class CommitOperation : public Operations {
     Status
     ResourceNotNullRequired() const {
         Status status;
-        if (!resource_) return Status(40060, "No specified resource");
+        if (!resource_)
+            return Status(40060, "No specified resource");
         return status;
     }
 
@@ -173,7 +179,8 @@ class LoadOperation : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_) return status_;
+        if (done_)
+            return status_;
         auto status = store.GetResource<ResourceT>(context_.id, resource_);
         SetStatus(status);
         Done();
@@ -186,9 +193,11 @@ class LoadOperation : public Operations {
             WaitToFinish();
         }
         auto status = DoneRequired();
-        if (!status.ok()) return status;
+        if (!status.ok())
+            return status;
         status = ResourceNotNullRequired();
-        if (!status.ok()) return status;
+        if (!status.ok())
+            return status;
         res = resource_;
         return status;
     }
@@ -197,7 +206,8 @@ class LoadOperation : public Operations {
     Status
     ResourceNotNullRequired() const {
         Status status;
-        if (!resource_) return Status(40060, "No specified resource");
+        if (!resource_)
+            return Status(40060, "No specified resource");
         return status;
     }
 
@@ -213,7 +223,8 @@ class HardDeleteOperation : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_) return status_;
+        if (done_)
+            return status_;
         auto status = store.RemoveResource<ResourceT>(id_);
         SetStatus(status);
         Done();
@@ -232,7 +243,8 @@ class HardDeleteOperation<Collection> : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_) return status_;
+        if (done_)
+            return status_;
         auto status = store.RemoveCollection(id_);
         SetStatus(status);
         Done();

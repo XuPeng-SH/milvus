@@ -27,7 +27,8 @@ Operations::Operations(const OperationContext& context, ScopedSnapshotT prev_ss)
 Operations::Operations(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id)
     : context_(context), uid_(UID++), status_(40005, "Operation Pending") {
     auto status = Snapshots::GetInstance().GetSnapshot(prev_ss_, collection_id, commit_id);
-    if (!status.ok()) prev_ss_ = ScopedSnapshotT();
+    if (!status.ok())
+        prev_ss_ = ScopedSnapshotT();
 }
 
 ID_TYPE
@@ -67,7 +68,8 @@ Operations::PreCheck() {
 Status
 Operations::Push(bool sync) {
     auto status = PreCheck();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     return OperationExecutor::GetInstance().Submit(shared_from_this(), sync);
 }
 
@@ -75,7 +77,8 @@ bool
 Operations::IsStale() const {
     ScopedSnapshotT curr_ss;
     auto status = Snapshots::GetInstance().GetSnapshot(curr_ss, prev_ss_->GetCollectionId());
-    if (!status.ok()) return true;
+    if (!status.ok())
+        return true;
     if (prev_ss_->GetID() == curr_ss->GetID()) {
         return false;
     }
@@ -112,18 +115,22 @@ Operations::PrevSnapshotRequried() const {
 Status
 Operations::GetSnapshot(ScopedSnapshotT& ss) const {
     auto status = PrevSnapshotRequried();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     status = DoneRequired();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     status = IDSNotEmptyRequried();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     status = Snapshots::GetInstance().GetSnapshot(ss, prev_ss_->GetCollectionId(), ids_.back());
     return status;
 }
 
 Status
 Operations::ApplyToStore(Store& store) {
-    if (done_) return status_;
+    if (done_)
+        return status_;
     auto status = OnExecute(store);
     SetStatus(status);
     Done();

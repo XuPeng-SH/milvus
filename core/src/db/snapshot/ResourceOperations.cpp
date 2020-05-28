@@ -111,7 +111,8 @@ SegmentOperation::SegmentOperation(const OperationContext& context, ID_TYPE coll
 
 Status
 SegmentOperation::PreCheck() {
-    if (!context_.prev_partition) return Status(40060, "Invalid SegmentOperation Context");
+    if (!context_.prev_partition)
+        return Status(40060, "Invalid SegmentOperation Context");
     return Status::OK();
 }
 

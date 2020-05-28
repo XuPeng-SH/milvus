@@ -102,7 +102,8 @@ class LoadOperation<Collection> : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_) return status_;
+        if (done_)
+            return status_;
         Status status;
         if (context_.id == 0 && context_.name != "") {
             status = store.GetCollection(context_.name, resource_);
@@ -120,7 +121,8 @@ class LoadOperation<Collection> : public Operations {
             WaitToFinish();
         }
         auto status = DoneRequired();
-        if (!status.ok()) return status;
+        if (!status.ok())
+            return status;
         if (!resource_) {
             return Status(40060, "No specified resource");
         }

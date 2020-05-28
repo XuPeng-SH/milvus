@@ -22,7 +22,7 @@ Snapshots::DropCollection(ID_TYPE collection_id) {
     auto status = GetSnapshot(ss, collection_id);
     if (!status.ok())
         return status;
-        /* return Status(40004, "Collection not found"); */
+    /* return Status(40004, "Collection not found"); */
     return DoDropCollection(ss);
 }
 
@@ -86,8 +86,8 @@ Snapshots::LoadNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
     if (collection_commit_ids.size() == 0) {
         return Status(40030, "No collection commit found");
     }
-    holder = std::make_shared<SnapshotHolder>(
-        collection_id, std::bind(&Snapshots::SnapshotGCCallback, this, std::placeholders::_1));
+    holder = std::make_shared<SnapshotHolder>(collection_id,
+                                              std::bind(&Snapshots::SnapshotGCCallback, this, std::placeholders::_1));
     for (auto c_c_id : collection_commit_ids) {
         holder->Add(c_c_id);
     }
@@ -121,7 +121,8 @@ Snapshots::GetHolder(const std::string& name, SnapshotHolderPtr& holder) {
     op->Push();
     CollectionPtr c;
     auto status = op->GetResource(c);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     return GetHolder(c->GetID(), holder);
 }
 

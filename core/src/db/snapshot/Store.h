@@ -189,10 +189,8 @@ class Store {
     Status
     CreateCollection(Collection&& collection, CollectionPtr& return_v) {
         auto& resources = std::get<Collection::MapT>(resources_);
-        if (!collection.HasAssigned()
-             && (name_ids_.find(collection.GetName()) != name_ids_.end())
-             && (resources[name_ids_[collection.GetName()]]->IsActive())
-             && !collection.IsDeactive()) {
+        if (!collection.HasAssigned() && (name_ids_.find(collection.GetName()) != name_ids_.end()) &&
+            (resources[name_ids_[collection.GetName()]]->IsActive()) && !collection.IsDeactive()) {
             return Status(40070, "Duplcated");
         }
         auto c = std::make_shared<Collection>(collection);
@@ -281,16 +279,14 @@ class Store {
             CreateResource<Collection>(Collection(*c), n);
             return n->GetID();
         });
-        register_any_visitor<CollectionCommit::Ptr>(
-            [this](auto c) {
+        register_any_visitor<CollectionCommit::Ptr>([this](auto c) {
             using T = CollectionCommit;
             using PtrT = typename T::Ptr;
             PtrT n;
             CreateResource<T>(T(*c), n);
             return n->GetID();
         });
-        register_any_visitor<SchemaCommit::Ptr>(
-            [this](auto c) {
+        register_any_visitor<SchemaCommit::Ptr>([this](auto c) {
             using T = SchemaCommit;
             using PtrT = typename T::Ptr;
             PtrT n;

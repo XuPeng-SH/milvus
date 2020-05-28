@@ -126,8 +126,7 @@ class SoftDeleteCollectionOperation : public Operations {
  public:
     using BaseT = Operations;
     // TODO: Define error code and msg later
-    explicit SoftDeleteCollectionOperation(const OperationContext& context)
-        : BaseT(context, ScopedSnapshotT()) {
+    explicit SoftDeleteCollectionOperation(const OperationContext& context) : BaseT(context, ScopedSnapshotT()) {
     }
 
     Status

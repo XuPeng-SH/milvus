@@ -29,14 +29,16 @@ BuildOperation::PreExecute(Store& store) {
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
     auto status = op.GetResource(context_.new_segment_commit);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     PartitionCommitOperation pc_op(context_, prev_ss_);
     pc_op(store);
 
     OperationContext cc_context;
     status = pc_op.GetResource(cc_context.new_partition_commit);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     CollectionCommitOperation cc_op(cc_context, prev_ss_);
     cc_op(store);
@@ -48,11 +50,13 @@ BuildOperation::PreExecute(Store& store) {
 
     PartitionCommitPtr pc;
     status = pc_op.GetResource(pc);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     CollectionCommitPtr cc;
     status = cc_op.GetResource(cc);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     AddStep(*pc);
     AddStep(*cc);
@@ -88,7 +92,8 @@ BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentF
     auto new_sf_op = std::make_shared<SegmentFileOperation>(context, prev_ss_);
     new_sf_op->Push();
     auto status = new_sf_op->GetResource(created);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     context_.new_segment_files.push_back(created);
     return status;
 }
@@ -124,7 +129,8 @@ NewSegmentOperation::PreExecute(Store& store) {
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
     auto status = op.GetResource(context_.new_segment_commit);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     PartitionCommitOperation pc_op(context_, prev_ss_);
     pc_op(store);
@@ -142,11 +148,13 @@ NewSegmentOperation::PreExecute(Store& store) {
 
     PartitionCommitPtr pc;
     status = pc_op.GetResource(pc);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     CollectionCommitPtr cc;
     status = cc_op.GetResource(cc);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     AddStep(*pc);
     AddStep(*cc);
@@ -158,7 +166,8 @@ NewSegmentOperation::CommitNewSegment(SegmentPtr& created) {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
     op->Push();
     auto status = op->GetResource(context_.new_segment);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     created = context_.new_segment;
     return status;
 }
@@ -171,7 +180,8 @@ NewSegmentOperation::CommitNewSegmentFile(const SegmentFileContext& context, Seg
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
     new_sf_op->Push();
     auto status = new_sf_op->GetResource(created);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     context_.new_segment_files.push_back(created);
     return status;
@@ -193,7 +203,8 @@ MergeOperation::CommitNewSegment(SegmentPtr& created) {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
     op->Push();
     status = op->GetResource(context_.new_segment);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     created = context_.new_segment;
     return status;
 }
@@ -203,14 +214,16 @@ MergeOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentF
     // PXU TODO: Check element type and segment file mapping rules
     SegmentPtr new_segment;
     auto status = CommitNewSegment(new_segment);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     auto c = context;
     c.segment_id = new_segment->GetID();
     c.partition_id = new_segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
     new_sf_op->Push();
     status = new_sf_op->GetResource(created);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     context_.new_segment_files.push_back(created);
     return status;
 }
@@ -223,7 +236,8 @@ MergeOperation::PreExecute(Store& store) {
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
     auto status = op.GetResource(context_.new_segment_commit);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     // PXU TODO: Check stale segments
 
@@ -232,7 +246,8 @@ MergeOperation::PreExecute(Store& store) {
 
     OperationContext cc_context;
     status = pc_op.GetResource(cc_context.new_partition_commit);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     CollectionCommitOperation cc_op(cc_context, prev_ss_);
     cc_op(store);
 
@@ -244,11 +259,13 @@ MergeOperation::PreExecute(Store& store) {
 
     PartitionCommitPtr pc;
     status = pc_op.GetResource(pc);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     CollectionCommitPtr cc;
     status = cc_op.GetResource(cc);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
 
     AddStep(*pc);
     AddStep(*cc);
@@ -324,41 +341,37 @@ CreateCollectionOperation::DoExecute(Store& store) {
         MappingT element_ids = {};
         FieldElementPtr raw_element;
         status = store.CreateResource<FieldElement>(
-            FieldElement(collection->GetID(), field->GetID(), "RAW", FieldElementType::RAW),
-            raw_element);
+            FieldElement(collection->GetID(), field->GetID(), "RAW", FieldElementType::RAW), raw_element);
         AddStep(*raw_element);
         element_ids.insert(raw_element->GetID());
         for (auto& element_schema : field_elements) {
             FieldElementPtr element;
-            status = store.CreateResource<FieldElement>(FieldElement(
-                collection->GetID(), field->GetID(), element_schema->GetName(), element_schema->GetFtype()),
-                    element);
+            status =
+                store.CreateResource<FieldElement>(FieldElement(collection->GetID(), field->GetID(),
+                                                                element_schema->GetName(), element_schema->GetFtype()),
+                                                   element);
             AddStep(*element);
             element_ids.insert(element->GetID());
         }
         FieldCommitPtr field_commit;
-        status =
-            store.CreateResource<FieldCommit>(FieldCommit(collection->GetID(), field->GetID(), element_ids),
-                    field_commit);
+        status = store.CreateResource<FieldCommit>(FieldCommit(collection->GetID(), field->GetID(), element_ids),
+                                                   field_commit);
         AddStep(*field_commit);
         field_commit_ids.insert(field_commit->GetID());
     }
     SchemaCommitPtr schema_commit;
-    status = store.CreateResource<SchemaCommit>(SchemaCommit(collection->GetID(), field_commit_ids),
-            schema_commit);
+    status = store.CreateResource<SchemaCommit>(SchemaCommit(collection->GetID(), field_commit_ids), schema_commit);
     AddStep(*schema_commit);
     PartitionPtr partition;
     status = store.CreateResource<Partition>(Partition("_default", collection->GetID()), partition);
     AddStep(*partition);
     PartitionCommitPtr partition_commit;
-    status =
-        store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()),
-                partition_commit);
+    status = store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()),
+                                                   partition_commit);
     AddStep(*partition_commit);
     CollectionCommitPtr collection_commit;
     status = store.CreateResource<CollectionCommit>(
-        CollectionCommit(collection->GetID(), schema_commit->GetID(), {partition_commit->GetID()}),
-        collection_commit);
+        CollectionCommit(collection->GetID(), schema_commit->GetID(), {partition_commit->GetID()}), collection_commit);
     AddStep(*collection_commit);
     context_.collection_commit = collection_commit;
     return Status::OK();
@@ -367,9 +380,11 @@ CreateCollectionOperation::DoExecute(Store& store) {
 Status
 CreateCollectionOperation::GetSnapshot(ScopedSnapshotT& ss) const {
     auto status = DoneRequired();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     status = IDSNotEmptyRequried();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     if (!context_.collection_commit)
         return Status(40032, "No Snapshot is available");
     status = Snapshots::GetInstance().GetSnapshot(ss, context_.collection_commit->GetCollectionId());
