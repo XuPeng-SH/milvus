@@ -83,16 +83,14 @@ BuildOperation::DoExecute(Store& store) {
     return Status::OK();
 }
 
-SegmentFilePtr
-BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context) {
+Status
+BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created) {
     auto new_sf_op = std::make_shared<SegmentFileOperation>(context, prev_ss_);
-    OperationExecutor::GetInstance().Submit(new_sf_op);
-    new_sf_op->WaitToFinish();
-    SegmentFilePtr sf;
-    auto status = new_sf_op->GetResource(sf);
-    if (!status.ok()) return nullptr;
-    context_.new_segment_files.push_back(sf);
-    return sf;
+    new_sf_op->Push();
+    auto status = new_sf_op->GetResource(created);
+    if (!status.ok()) return status;
+    context_.new_segment_files.push_back(created);
+    return status;
 }
 
 NewSegmentOperation::NewSegmentOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
@@ -158,8 +156,7 @@ NewSegmentOperation::PreExecute(Store& store) {
 Status
 NewSegmentOperation::CommitNewSegment(SegmentPtr& created) {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
-    OperationExecutor::GetInstance().Submit(op);
-    op->WaitToFinish();
+    op->Push();
     auto status = op->GetResource(context_.new_segment);
     if (!status.ok()) return status;
     created = context_.new_segment;
@@ -172,8 +169,7 @@ NewSegmentOperation::CommitNewSegmentFile(const SegmentFileContext& context, Seg
     c.segment_id = context_.new_segment->GetID();
     c.partition_id = context_.new_segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
-    OperationExecutor::GetInstance().Submit(new_sf_op);
-    new_sf_op->WaitToFinish();
+    new_sf_op->Push();
     auto status = new_sf_op->GetResource(created);
     if (!status.ok()) return status;
 
@@ -187,33 +183,36 @@ MergeOperation::MergeOperation(const OperationContext& context, ID_TYPE collecti
     : BaseT(context, collection_id, commit_id) {
 }
 
-SegmentPtr
-MergeOperation::CommitNewSegment() {
-    if (context_.new_segment)
-        return context_.new_segment;
+Status
+MergeOperation::CommitNewSegment(SegmentPtr& created) {
+    Status status;
+    if (context_.new_segment) {
+        created = context_.new_segment;
+        return status;
+    }
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
-    OperationExecutor::GetInstance().Submit(op);
-    op->WaitToFinish();
-    auto status = op->GetResource(context_.new_segment);
-    if (!status.ok()) return nullptr;
-    return context_.new_segment;
+    op->Push();
+    status = op->GetResource(context_.new_segment);
+    if (!status.ok()) return status;
+    created = context_.new_segment;
+    return status;
 }
 
-SegmentFilePtr
-MergeOperation::CommitNewSegmentFile(const SegmentFileContext& context) {
+Status
+MergeOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created) {
     // PXU TODO: Check element type and segment file mapping rules
-    auto new_segment = CommitNewSegment();
+    SegmentPtr new_segment;
+    auto status = CommitNewSegment(new_segment);
+    if (!status.ok()) return status;
     auto c = context;
     c.segment_id = new_segment->GetID();
     c.partition_id = new_segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
-    OperationExecutor::GetInstance().Submit(new_sf_op);
-    new_sf_op->WaitToFinish();
-    SegmentFilePtr sf;
-    auto status = new_sf_op->GetResource(sf);
-    if (!status.ok()) return nullptr;
-    context_.new_segment_files.push_back(sf);
-    return sf;
+    new_sf_op->Push();
+    status = new_sf_op->GetResource(created);
+    if (!status.ok()) return status;
+    context_.new_segment_files.push_back(created);
+    return status;
 }
 
 Status

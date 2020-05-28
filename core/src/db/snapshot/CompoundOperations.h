@@ -30,10 +30,8 @@ class BuildOperation : public Operations {
     Status
     PreExecute(Store&) override;
 
-    /* Status */
-    /* CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created); */
-    SegmentFilePtr
-    CommitNewSegmentFile(const SegmentFileContext& context);
+    Status
+    CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created);
 };
 
 class NewSegmentOperation : public Operations {
@@ -68,10 +66,10 @@ class MergeOperation : public Operations {
     Status
     DoExecute(Store&) override;
 
-    SegmentPtr
-    CommitNewSegment();
-    SegmentFilePtr
-    CommitNewSegmentFile(const SegmentFileContext& context);
+    Status
+    CommitNewSegment(SegmentPtr&);
+    Status
+    CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr&);
 };
 
 class CreateCollectionOperation : public Operations {

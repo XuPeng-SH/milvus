@@ -245,7 +245,9 @@ TEST_F(SnapshotTest, OperationTest) {
         {
             milvus::engine::snapshot::OperationContext context;
             auto build_op = std::make_shared<milvus::engine::snapshot::BuildOperation>(context, ss);
-            auto seg_file = build_op->CommitNewSegmentFile(sf_context);
+            milvus::engine::snapshot::SegmentFilePtr seg_file;
+            status = build_op->CommitNewSegmentFile(sf_context, seg_file);
+            ASSERT_TRUE(status.ok());
             ASSERT_TRUE(seg_file);
             auto prev_segment_commit = ss->GetSegmentCommit(seg_file->GetSegmentId());
             auto prev_segment_commit_mappings = prev_segment_commit->GetMappings();
@@ -313,12 +315,16 @@ TEST_F(SnapshotTest, OperationTest) {
             ASSERT_TRUE(!expect_null);
             ASSERT_NE(prev_partition_commit->ToString(), "");
             auto op = std::make_shared<milvus::engine::snapshot::MergeOperation>(merge_ctx, ss);
-            auto new_seg = op->CommitNewSegment();
+            milvus::engine::snapshot::SegmentPtr new_seg;
+            status = op->CommitNewSegment(new_seg);
             sf_context.segment_id = new_seg->GetID();
-            auto seg_file = op->CommitNewSegmentFile(sf_context);
+            milvus::engine::snapshot::SegmentFilePtr seg_file;
+            status = op->CommitNewSegmentFile(sf_context, seg_file);
+            ASSERT_TRUE(status.ok());
             op->Push();
             status = op->GetSnapshot(ss);
             ASSERT_TRUE(ss->GetID() > ss_id);
+            ASSERT_TRUE(status.ok());
 
             auto segment_commit = ss->GetSegmentCommit(new_seg->GetID());
             auto new_partition_commit = ss->GetPartitionCommitByPartitionId(partition_id);
