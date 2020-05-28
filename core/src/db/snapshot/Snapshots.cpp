@@ -55,8 +55,8 @@ Snapshots::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE collection_id, ID_TYPE id, b
     auto status = GetHolder(collection_id, holder);
     if (!status.ok())
         return status;
-    ss = holder->GetSnapshot(id, scoped);
-    return Status::OK();
+    status = holder->GetSnapshot(ss, id, scoped);
+    return status;
 }
 
 Status
@@ -65,8 +65,8 @@ Snapshots::GetSnapshot(ScopedSnapshotT& ss, const std::string& name, ID_TYPE id,
     auto status = GetHolder(name, holder);
     if (!status.ok())
         return status;
-    ss = holder->GetSnapshot(id, scoped);
-    return Status::OK();
+    status = holder->GetSnapshot(ss, id, scoped);
+    return status;
 }
 
 Status
@@ -140,8 +140,12 @@ Snapshots::GetHolder(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
 
     std::unique_lock<std::shared_timed_mutex> lock(mutex_);
     holders_[collection_id] = holder;
-    name_id_map_[holder->GetSnapshot()->GetName()] = collection_id;
-    return Status::OK();
+    ScopedSnapshotT ss;
+    status = holder->GetSnapshot(ss);
+    if (!status.ok())
+        return status;
+    name_id_map_[ss->GetName()] = collection_id;
+    return status;
 }
 
 Status
