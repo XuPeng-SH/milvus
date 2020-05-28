@@ -30,16 +30,16 @@ namespace snapshot {
 
 using StepsT = std::vector<std::any>;
 
-enum OpStatus {
-    OP_PENDING = 0,
-    OP_OK,
-    OP_STALE_OK,
-    OP_STALE_CANCEL,
-    OP_STALE_RESCHEDULE,
-    OP_FAIL_INVALID_PARAMS,
-    OP_FAIL_DUPLICATED,
-    OP_FAIL_FLUSH_META
-};
+/* enum OpStatus { */
+/*     OP_PENDING = 0, */
+/*     OP_OK, */
+/*     OP_STALE_OK, */
+/*     OP_STALE_CANCEL, */
+/*     OP_STALE_RESCHEDULE, */
+/*     OP_FAIL_INVALID_PARAMS, */
+/*     OP_FAIL_DUPLICATED, */
+/*     OP_FAIL_FLUSH_META */
+/* }; */
 
 class Operations : public std::enable_shared_from_this<Operations> {
  public:
@@ -71,31 +71,35 @@ class Operations : public std::enable_shared_from_this<Operations> {
     ID_TYPE
     GetID() const;
 
-    virtual void
+    virtual Status
     OnExecute(Store&);
-    virtual bool
+    virtual Status
     PreExecute(Store&);
-    virtual bool
+    virtual Status
     DoExecute(Store&);
-    virtual bool
+    virtual Status
     PostExecute(Store&);
 
     virtual ScopedSnapshotT
     GetSnapshot() const;
 
-    virtual void
+    virtual Status
     operator()(Store& store);
-    virtual void
+    virtual Status
     Push(bool sync = true);
 
-    virtual void
+    virtual Status
     ApplyToStore(Store& store);
 
-    bool
+    Status
     WaitToFinish();
 
     void
     Done();
+
+    void SetStatus(const Status& status);
+
+    Status GetStatus() const { return status_; }
 
     virtual ~Operations() {
     }
@@ -105,7 +109,8 @@ class Operations : public std::enable_shared_from_this<Operations> {
     ScopedSnapshotT prev_ss_;
     StepsT steps_;
     std::vector<ID_TYPE> ids_;
-    OpStatus status_ = OP_PENDING;
+    bool done_ = false;
+    Status status_;
     mutable std::mutex finish_mtx_;
     std::condition_variable finish_cond_;
     ID_TYPE uid_;
@@ -136,9 +141,10 @@ class CommitOperation : public Operations {
     }
 
     typename ResourceT::Ptr
-    GetResource() const {
-        if (status_ == OP_PENDING)
-            return nullptr;
+    GetResource(bool wait = false) {
+        if (wait) {
+            WaitToFinish();
+        }
         if (ids_.size() == 0)
             return nullptr;
         resource_->SetID(ids_[0]);
@@ -159,20 +165,21 @@ class LoadOperation : public Operations {
         : Operations(OperationContext(), ScopedSnapshotT()), context_(context) {
     }
 
-    void
+    Status
     ApplyToStore(Store& store) override {
-        if (status_ != OP_PENDING) {
-            Done();
-            return;
-        }
+        if (done_) return status_;
         resource_ = store.GetResource<ResourceT>(context_.id);
+        SetStatus(Status::OK());
         Done();
+        return status_;
     }
 
     typename ResourceT::Ptr
-    GetResource() const {
-        if (status_ == OP_PENDING)
-            return nullptr;
+    GetResource(bool wait = false) {
+        if (wait) {
+            WaitToFinish();
+        }
+        if (!done_) return nullptr;
         return resource_;
     }
 
@@ -187,25 +194,17 @@ class HardDeleteOperation : public Operations {
     explicit HardDeleteOperation(ID_TYPE id) : Operations(OperationContext(), ScopedSnapshotT()), id_(id) {
     }
 
-    void
+    Status
     ApplyToStore(Store& store) override {
-        if (status_ != OP_PENDING)
-            return;
-        ok_ = store.RemoveResource<ResourceT>(id_);
+        if (done_) return status_;
+        auto status = store.RemoveResource<ResourceT>(id_);
+        SetStatus(status);
         Done();
-    }
-
-    bool
-    GetStatus() const {
-        if (status_ == OP_PENDING)
-            return false;
-        return ok_;
+        return status_;
     }
 
  protected:
     ID_TYPE id_;
-    // PXU TODO: Replace all bool to Status type
-    bool ok_;
 };
 
 using OperationsPtr = std::shared_ptr<Operations>;

@@ -16,14 +16,6 @@ namespace milvus {
 namespace engine {
 namespace snapshot {
 
-template <typename... ResourceT>
-bool
-Snapshots::Flush(ResourceT&&... resources) {
-    auto t = std::make_tuple(resources...);
-    std::apply([](auto&&... args) { ((std::cout << args << "\n"), ...); }, t);
-    return true;
-}
-
 Status
 Snapshots::DropCollection(ID_TYPE collection_id) {
     auto ss = GetSnapshot(collection_id);

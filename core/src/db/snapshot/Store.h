@@ -14,6 +14,7 @@
 #include "db/snapshot/ResourceTypes.h"
 #include "db/snapshot/Resources.h"
 #include "db/snapshot/Utils.h"
+#include "utils/Status.h"
 
 #include <stdlib.h>
 #include <time.h>
@@ -64,12 +65,13 @@ class Store {
     }
 
     template <typename OpT>
-    bool
+    Status
     DoCommitOperation(OpT& op) {
         for (auto& step_v : op.GetSteps()) {
             auto id = ProcessOperationStep(step_v);
             op.SetStepResult(id);
         }
+        return Status::OK();
     }
 
     template <typename OpT>
@@ -137,17 +139,17 @@ class Store {
     }
 
     template <typename ResourceT>
-    bool
+    Status
     RemoveResource(ID_TYPE id) {
         auto& resources = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
-            return false;
+            return Status(40012, "DB resource not found");
         }
 
         resources.erase(it);
         std::cout << ">>> [Remove] " << ResourceT::Name << " " << id << std::endl;
-        return true;
+        return Status::OK();
     }
 
     IDS_TYPE

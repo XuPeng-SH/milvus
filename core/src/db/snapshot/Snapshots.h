@@ -51,10 +51,6 @@ class Snapshots {
     Status
     DropCollection(ID_TYPE collection_id);
 
-    template <typename... ResourceT>
-    bool
-    Flush(ResourceT&&... resources);
-
     void
     Reset();
 

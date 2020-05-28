@@ -21,11 +21,12 @@ namespace snapshot {
 static ID_TYPE UID = 1;
 
 Operations::Operations(const OperationContext& context, ScopedSnapshotT prev_ss)
-    : context_(context), prev_ss_(prev_ss), uid_(UID++) {
+    : context_(context), prev_ss_(prev_ss), uid_(UID++), status_(40005, "Operation Pending") {
 }
 
 Operations::Operations(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id)
-    : context_(context), prev_ss_(Snapshots::GetInstance().GetSnapshot(collection_id, commit_id)), uid_(UID++) {
+    : context_(context), prev_ss_(Snapshots::GetInstance().GetSnapshot(collection_id, commit_id)),
+      uid_(UID++), status_(40005, "Operation Pending") {
 }
 
 ID_TYPE
@@ -33,31 +34,36 @@ Operations::GetID() const {
     return uid_;
 }
 
-void
+Status
 Operations::operator()(Store& store) {
     return ApplyToStore(store);
 }
 
-bool
+void
+Operations::SetStatus(const Status& status) {
+    status_ = status;
+}
+
+Status
 Operations::WaitToFinish() {
     std::unique_lock<std::mutex> lock(finish_mtx_);
     /* std::cout << std::this_thread::get_id() << " Start Waiting Operation " << this->GetID() << std::endl; */
-    finish_cond_.wait(lock, [this] { return status_ != OP_PENDING; });
+    finish_cond_.wait(lock, [this] { return done_; });
     /* std::cout << std::this_thread::get_id() << " End   Waiting Operation " << this->GetID() << std::endl; */
-    return true;
+    return status_;
 }
 
 void
 Operations::Done() {
     std::unique_lock<std::mutex> lock(finish_mtx_);
-    status_ = OP_OK;
+    done_ = true;
     /* std::cout << std::this_thread::get_id() << " Done Operation " << this->GetID() << std::endl; */
     finish_cond_.notify_all();
 }
 
-void
+Status
 Operations::Push(bool sync) {
-    OperationExecutor::GetInstance().Submit(shared_from_this(), sync);
+    return OperationExecutor::GetInstance().Submit(shared_from_this(), sync);
 }
 
 bool
@@ -78,43 +84,40 @@ Operations::GetSnapshot() const {
     return Snapshots::GetInstance().GetSnapshot(prev_ss_->GetCollectionId(), ids_.back());
 }
 
-void
+Status
 Operations::ApplyToStore(Store& store) {
-    OnExecute(store);
+    auto status = OnExecute(store);
+    SetStatus(status);
     Done();
+    return status_;
 }
 
-void
+Status
 Operations::OnExecute(Store& store) {
-    auto r = PreExecute(store);
-    if (!r) {
-        status_ = OP_FAIL_FLUSH_META;
-        return;
+    auto status = PreExecute(store);
+    if (!status.ok()) {
+        return status;
     }
-    r = DoExecute(store);
-    if (!r) {
-        status_ = OP_FAIL_FLUSH_META;
-        return;
+    status = DoExecute(store);
+    if (!status.ok()) {
+        return status;
     }
-    PostExecute(store);
+    return PostExecute(store);
 }
 
-bool
+Status
 Operations::PreExecute(Store& store) {
-    return true;
+    return Status::OK();
 }
 
-bool
+Status
 Operations::DoExecute(Store& store) {
-    return true;
+    return Status::OK();
 }
 
-bool
+Status
 Operations::PostExecute(Store& store) {
-    auto ok = store.DoCommitOperation(*this);
-    if (!ok)
-        status_ = OP_FAIL_FLUSH_META;
-    return ok;
+    return store.DoCommitOperation(*this);
 }
 
 }  // namespace snapshot

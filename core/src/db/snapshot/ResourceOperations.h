@@ -31,7 +31,7 @@ class CollectionCommitOperation : public CommitOperation<CollectionCommit> {
         return prev_ss_->GetCollectionCommit();
     }
 
-    bool
+    Status
     DoExecute(Store&) override;
 };
 
@@ -47,7 +47,7 @@ class PartitionCommitOperation : public CommitOperation<PartitionCommit> {
     PartitionCommitPtr
     GetPrevResource() const override;
 
-    bool
+    Status
     DoExecute(Store&) override;
 };
 
@@ -63,7 +63,7 @@ class SegmentCommitOperation : public CommitOperation<SegmentCommit> {
     SegmentCommit::Ptr
     GetPrevResource() const override;
 
-    bool
+    Status
     DoExecute(Store&) override;
 };
 
@@ -76,7 +76,7 @@ class SegmentOperation : public CommitOperation<Segment> {
     SegmentOperation(const OperationContext& context, ScopedSnapshotT prev_ss);
     SegmentOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
-    bool
+    Status
     DoExecute(Store& store) override;
 };
 
@@ -86,7 +86,7 @@ class SegmentFileOperation : public CommitOperation<SegmentFile> {
     SegmentFileOperation(const SegmentFileContext& sc, ScopedSnapshotT prev_ss);
     SegmentFileOperation(const SegmentFileContext& sc, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
-    bool
+    Status
     DoExecute(Store& store) override;
 
  protected:
@@ -100,22 +100,25 @@ class LoadOperation<Collection> : public Operations {
         : Operations(OperationContext(), ScopedSnapshotT()), context_(context) {
     }
 
-    void
+    Status
     ApplyToStore(Store& store) override {
-        if (status_ != OP_PENDING)
-            return;
+        if (done_) return status_;
         if (context_.id == 0 && context_.name != "") {
             resource_ = store.GetCollection(context_.name);
         } else {
             resource_ = store.GetResource<Collection>(context_.id);
         }
+        SetStatus(Status::OK());
         Done();
+        return status_;
     }
 
     CollectionPtr
-    GetResource() const {
-        if (status_ == OP_PENDING)
-            return nullptr;
+    GetResource(bool wait = true) {
+        if (wait) {
+            WaitToFinish();
+        }
+        if (!done_) return nullptr;
         return resource_;
     }
 

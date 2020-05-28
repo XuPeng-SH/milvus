@@ -25,9 +25,9 @@ class BuildOperation : public Operations {
     BuildOperation(const OperationContext& context, ScopedSnapshotT prev_ss);
     BuildOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
-    bool
+    Status
     DoExecute(Store&) override;
-    bool
+    Status
     PreExecute(Store&) override;
 
     SegmentFilePtr
@@ -41,10 +41,10 @@ class NewSegmentOperation : public Operations {
     NewSegmentOperation(const OperationContext& context, ScopedSnapshotT prev_ss);
     NewSegmentOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
-    bool
+    Status
     DoExecute(Store&) override;
 
-    bool
+    Status
     PreExecute(Store&) override;
 
     SegmentPtr
@@ -61,9 +61,9 @@ class MergeOperation : public Operations {
     MergeOperation(const OperationContext& context, ScopedSnapshotT prev_ss);
     MergeOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
-    bool
+    Status
     PreExecute(Store&) override;
-    bool
+    Status
     DoExecute(Store&) override;
 
     SegmentPtr
@@ -77,7 +77,7 @@ class CreateCollectionOperation : public Operations {
     using BaseT = Operations;
     explicit CreateCollectionOperation(const CreateCollectionContext& context);
 
-    bool
+    Status
     DoExecute(Store&) override;
 
     ScopedSnapshotT
@@ -93,7 +93,7 @@ class GetSnapshotIDsOperation : public Operations {
 
     explicit GetSnapshotIDsOperation(ID_TYPE collection_id, bool reversed = true);
 
-    bool
+    Status
     DoExecute(Store& store) override;
 
     const IDS_TYPE&
@@ -111,7 +111,7 @@ class GetCollectionIDsOperation : public Operations {
 
     explicit GetCollectionIDsOperation(bool reversed = true);
 
-    bool
+    Status
     DoExecute(Store& store) override;
 
     const IDS_TYPE&
@@ -127,19 +127,14 @@ class SoftDeleteCollectionOperation : public Operations {
     using BaseT = Operations;
     // TODO: Define error code and msg later
     explicit SoftDeleteCollectionOperation(const OperationContext& context)
-        : BaseT(context, ScopedSnapshotT()), status_(40005, "Operation Pending") {
+        : BaseT(context, ScopedSnapshotT()) {
     }
 
     Status
-    GetStatus() const {
-        return status_;
-    }
-    bool
     DoExecute(Store& store) override;
 
  private:
     ID_TYPE collection_id_;
-    Status status_;
 };
 
 }  // namespace snapshot

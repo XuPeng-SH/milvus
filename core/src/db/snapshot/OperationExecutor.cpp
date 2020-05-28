@@ -29,16 +29,16 @@ OperationExecutor::GetInstance() {
     return executor;
 }
 
-bool
+Status
 OperationExecutor::Submit(OperationsPtr operation, bool sync) {
     if (!operation)
-        return true;
+        return Status(40030, "Invalid Operation");
     /* Store::GetInstance().Apply(*operation); */
     /* return true; */
     Enqueue(operation);
     if (sync)
         return operation->WaitToFinish();
-    return true;
+    return Status::OK();
 }
 
 void
