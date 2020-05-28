@@ -98,6 +98,8 @@ class Operations : public std::enable_shared_from_this<Operations> {
     DoneRequired() const;
     Status
     IDSNotEmptyRequried() const;
+    Status
+    PrevSnapshotRequried() const;
 
     OperationContext context_;
     ScopedSnapshotT prev_ss_;

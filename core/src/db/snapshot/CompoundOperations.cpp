@@ -306,14 +306,13 @@ CreateCollectionOperation::DoExecute(Store& store) {
 
 Status
 CreateCollectionOperation::GetSnapshot(ScopedSnapshotT& ss) const {
-    if (!done_) {
-        return Status(40031, "Operation is not done");
-    }
-    if (ids_.size() == 0)
-        return Status(40032, "No Snapshot is available");
+    auto status = DoneRequired();
+    if (!status.ok()) return status;
+    status = IDSNotEmptyRequried();
+    if (!status.ok()) return status;
     if (!context_.collection_commit)
         return Status(40032, "No Snapshot is available");
-    auto status = Snapshots::GetInstance().GetSnapshot(ss, context_.collection_commit->GetCollectionId());
+    status = Snapshots::GetInstance().GetSnapshot(ss, context_.collection_commit->GetCollectionId());
     return status;
 }
 

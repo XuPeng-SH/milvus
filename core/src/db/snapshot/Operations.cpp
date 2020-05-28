@@ -94,8 +94,19 @@ Operations::IDSNotEmptyRequried() const {
 }
 
 Status
+Operations::PrevSnapshotRequried() const {
+    Status status;
+    if (!prev_ss_) {
+        status = Status(40052, "Prev snapshot is requried");
+    }
+    return status;
+}
+
+Status
 Operations::GetSnapshot(ScopedSnapshotT& ss) const {
-    auto status = DoneRequired();
+    auto status = PrevSnapshotRequried();
+    if (!status.ok()) return status;
+    status = DoneRequired();
     if (!status.ok()) return status;
     status = IDSNotEmptyRequried();
     if (!status.ok()) return status;
@@ -105,6 +116,7 @@ Operations::GetSnapshot(ScopedSnapshotT& ss) const {
 
 Status
 Operations::ApplyToStore(Store& store) {
+    if (done_) return status_;
     auto status = OnExecute(store);
     SetStatus(status);
     Done();
