@@ -119,9 +119,9 @@ Snapshots::GetHolder(const std::string& name, SnapshotHolderPtr& holder) {
     context.name = name;
     auto op = std::make_shared<LoadOperation<Collection>>(context);
     op->Push();
-    auto c = op->GetResource();
-    if (!c)
-        return Status(40033, "No Specified Collection");
+    CollectionPtr c;
+    auto status = op->GetResource(c);
+    if (!status.ok()) return status;
     return GetHolder(c->GetID(), holder);
 }
 

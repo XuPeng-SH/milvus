@@ -136,18 +136,28 @@ class CommitOperation : public Operations {
         return nullptr;
     }
 
-    typename ResourceT::Ptr
-    GetResource(bool wait = false) {
+    Status
+    GetResource(typename ResourceT::Ptr& res, bool wait = false) {
         if (wait) {
             WaitToFinish();
         }
-        if (ids_.size() == 0)
-            return nullptr;
+        auto status = DoneRequired();
+        if (!status.ok()) return status;
+        status = IDSNotEmptyRequried();
+        if (!status.ok()) return status;
         resource_->SetID(ids_[0]);
-        return resource_;
+        res = resource_;
+        return status;
     }
 
  protected:
+    Status
+    ResourceNotNullRequired() const {
+        Status status;
+        if (!resource_) return Status(40060, "No specified resource");
+        return status;
+    }
+
     typename ResourceT::Ptr resource_;
 };
 
@@ -167,16 +177,27 @@ class LoadOperation : public Operations {
         return status_;
     }
 
-    typename ResourceT::Ptr
-    GetResource(bool wait = false) {
+    Status
+    GetResource(typename ResourceT::Ptr& res, bool wait = false) {
         if (wait) {
             WaitToFinish();
         }
-        if (!done_) return nullptr;
-        return resource_;
+        auto status = DoneRequired();
+        if (!status.ok()) return status;
+        status = ResourceNotNullRequired();
+        if (!status.ok()) return status;
+        res = resource_;
+        return status;
     }
 
  protected:
+    Status
+    ResourceNotNullRequired() const {
+        Status status;
+        if (!resource_) return Status(40060, "No specified resource");
+        return status;
+    }
+
     LoadOperationContext context_;
     typename ResourceT::Ptr resource_;
 };

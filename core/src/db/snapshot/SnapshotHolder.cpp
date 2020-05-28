@@ -129,8 +129,7 @@ SnapshotHolder::LoadNoLock(ID_TYPE collection_commit_id, CollectionCommitPtr& cc
     context.id = collection_commit_id;
     auto op = std::make_shared<LoadOperation<CollectionCommit>>(context);
     op->Push();
-    cc = op->GetResource();
-    return Status::OK();
+    return op->GetResource(cc);
 }
 
 }  // namespace snapshot

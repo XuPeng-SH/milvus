@@ -28,15 +28,16 @@ Status
 BuildOperation::PreExecute(Store& store) {
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
-    context_.new_segment_commit = op.GetResource();
-    if (!context_.new_segment_commit)
-        return Status(40020, "Invalid Build Operation Context");
+    auto status = op.GetResource(context_.new_segment_commit);
+    if (!status.ok()) return status;
 
     PartitionCommitOperation pc_op(context_, prev_ss_);
     pc_op(store);
 
     OperationContext cc_context;
-    cc_context.new_partition_commit = pc_op.GetResource();
+    status = pc_op.GetResource(cc_context.new_partition_commit);
+    if (!status.ok()) return status;
+
     CollectionCommitOperation cc_op(cc_context, prev_ss_);
     cc_op(store);
 
@@ -44,9 +45,18 @@ BuildOperation::PreExecute(Store& store) {
         AddStep(*new_segment_file);
     }
     AddStep(*context_.new_segment_commit);
-    AddStep(*pc_op.GetResource());
-    AddStep(*cc_op.GetResource());
-    return Status::OK();
+
+    PartitionCommitPtr pc;
+    status = pc_op.GetResource(pc);
+    if (!status.ok()) return status;
+
+    CollectionCommitPtr cc;
+    status = cc_op.GetResource(cc);
+    if (!status.ok()) return status;
+
+    AddStep(*pc);
+    AddStep(*cc);
+    return status;
 }
 
 Status
@@ -78,8 +88,11 @@ BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context) {
     auto new_sf_op = std::make_shared<SegmentFileOperation>(context, prev_ss_);
     OperationExecutor::GetInstance().Submit(new_sf_op);
     new_sf_op->WaitToFinish();
-    context_.new_segment_files.push_back(new_sf_op->GetResource());
-    return new_sf_op->GetResource();
+    SegmentFilePtr sf;
+    auto status = new_sf_op->GetResource(sf);
+    if (!status.ok()) return nullptr;
+    context_.new_segment_files.push_back(sf);
+    return sf;
 }
 
 NewSegmentOperation::NewSegmentOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
@@ -109,15 +122,14 @@ NewSegmentOperation::PreExecute(Store& store) {
     // 2. Check Stale and others
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
-    context_.new_segment_commit = op.GetResource();
-    if (!context_.new_segment_commit)
-        return Status(40020, "Invalid NewSegmentOperation Context");
+    auto status = op.GetResource(context_.new_segment_commit);
+    if (!status.ok()) return status;
 
     PartitionCommitOperation pc_op(context_, prev_ss_);
     pc_op(store);
 
     OperationContext cc_context;
-    cc_context.new_partition_commit = pc_op.GetResource();
+    status = pc_op.GetResource(cc_context.new_partition_commit);
     CollectionCommitOperation cc_op(cc_context, prev_ss_);
     cc_op(store);
 
@@ -126,9 +138,18 @@ NewSegmentOperation::PreExecute(Store& store) {
     }
     AddStep(*context_.new_segment);
     AddStep(*context_.new_segment_commit);
-    AddStep(*pc_op.GetResource());
-    AddStep(*cc_op.GetResource());
-    return Status::OK();
+
+    PartitionCommitPtr pc;
+    status = pc_op.GetResource(pc);
+    if (!status.ok()) return status;
+
+    CollectionCommitPtr cc;
+    status = cc_op.GetResource(cc);
+    if (!status.ok()) return status;
+
+    AddStep(*pc);
+    AddStep(*cc);
+    return status;
 }
 
 SegmentPtr
@@ -136,7 +157,8 @@ NewSegmentOperation::CommitNewSegment() {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
     OperationExecutor::GetInstance().Submit(op);
     op->WaitToFinish();
-    context_.new_segment = op->GetResource();
+    auto status = op->GetResource(context_.new_segment);
+    if (!status.ok()) return nullptr;
     return context_.new_segment;
 }
 
@@ -148,8 +170,12 @@ NewSegmentOperation::CommitNewSegmentFile(const SegmentFileContext& context) {
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
     OperationExecutor::GetInstance().Submit(new_sf_op);
     new_sf_op->WaitToFinish();
-    context_.new_segment_files.push_back(new_sf_op->GetResource());
-    return new_sf_op->GetResource();
+    SegmentFilePtr sf;
+    auto status = new_sf_op->GetResource(sf);
+    if (!status.ok()) return nullptr;
+
+    context_.new_segment_files.push_back(sf);
+    return sf;
 }
 
 MergeOperation::MergeOperation(const OperationContext& context, ScopedSnapshotT prev_ss) : BaseT(context, prev_ss) {
@@ -165,7 +191,8 @@ MergeOperation::CommitNewSegment() {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
     OperationExecutor::GetInstance().Submit(op);
     op->WaitToFinish();
-    context_.new_segment = op->GetResource();
+    auto status = op->GetResource(context_.new_segment);
+    if (!status.ok()) return nullptr;
     return context_.new_segment;
 }
 
@@ -179,8 +206,11 @@ MergeOperation::CommitNewSegmentFile(const SegmentFileContext& context) {
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
     OperationExecutor::GetInstance().Submit(new_sf_op);
     new_sf_op->WaitToFinish();
-    context_.new_segment_files.push_back(new_sf_op->GetResource());
-    return new_sf_op->GetResource();
+    SegmentFilePtr sf;
+    auto status = new_sf_op->GetResource(sf);
+    if (!status.ok()) return nullptr;
+    context_.new_segment_files.push_back(sf);
+    return sf;
 }
 
 Status
@@ -190,9 +220,8 @@ MergeOperation::PreExecute(Store& store) {
     // 2. Check Stale and others
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
-    context_.new_segment_commit = op.GetResource();
-    if (!context_.new_segment_commit)
-        return Status(40020, "Invalid MergeOperation Context");
+    auto status = op.GetResource(context_.new_segment_commit);
+    if (!status.ok()) return status;
 
     // PXU TODO: Check stale segments
 
@@ -200,7 +229,8 @@ MergeOperation::PreExecute(Store& store) {
     pc_op(store);
 
     OperationContext cc_context;
-    cc_context.new_partition_commit = pc_op.GetResource();
+    status = pc_op.GetResource(cc_context.new_partition_commit);
+    if (!status.ok()) return status;
     CollectionCommitOperation cc_op(cc_context, prev_ss_);
     cc_op(store);
 
@@ -209,8 +239,17 @@ MergeOperation::PreExecute(Store& store) {
     }
     AddStep(*context_.new_segment);
     AddStep(*context_.new_segment_commit);
-    AddStep(*pc_op.GetResource());
-    AddStep(*cc_op.GetResource());
+
+    PartitionCommitPtr pc;
+    status = pc_op.GetResource(pc);
+    if (!status.ok()) return status;
+
+    CollectionCommitPtr cc;
+    status = cc_op.GetResource(cc);
+    if (!status.ok()) return status;
+
+    AddStep(*pc);
+    AddStep(*cc);
     return Status::OK();
 }
 

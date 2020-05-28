@@ -160,7 +160,7 @@ TEST_F(SnapshotTest, CreateCollectionOperationTest) {
 
     milvus::engine::snapshot::ScopedSnapshotT latest_ss;
     status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(latest_ss, "xxxx");
-    ASSERT_TRUE(!latest_ss);
+    ASSERT_TRUE(!status.ok());
 
     status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(latest_ss, collection_name);
     ASSERT_TRUE(latest_ss);

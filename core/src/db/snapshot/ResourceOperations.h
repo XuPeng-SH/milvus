@@ -114,13 +114,18 @@ class LoadOperation<Collection> : public Operations {
         return status_;
     }
 
-    CollectionPtr
-    GetResource(bool wait = true) {
+    Status
+    GetResource(CollectionPtr& res, bool wait = true) {
         if (wait) {
             WaitToFinish();
         }
-        if (!done_) return nullptr;
-        return resource_;
+        auto status = DoneRequired();
+        if (!status.ok()) return status;
+        if (!resource_) {
+            return Status(40060, "No specified resource");
+        }
+        res = resource_;
+        return status;
     }
 
  protected:
