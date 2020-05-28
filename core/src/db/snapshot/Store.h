@@ -113,29 +113,27 @@ class Store {
 
     Status
     GetCollection(const std::string& name, CollectionPtr& return_v) {
-        auto it = name_collections_.find(name);
-        if (it == name_collections_.end()) {
+        auto it = name_ids_.find(name);
+        if (it == name_ids_.end()) {
             return Status(40012, "DB resource not found");
         }
-        auto& c = it->second;
-        return_v = std::make_shared<Collection>(*c);
-        std::cout << "<<< [Load] Collection " << name << std::endl;
-        return Status::OK();
+        auto& id = it->second;
+        return GetResource<Collection>(id, return_v);
     }
 
-    bool
+    Status
     RemoveCollection(ID_TYPE id) {
         auto& resources = std::get<Collection::MapT>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
-            return false;
+            return Status(40012, "DB resource not found");
         }
 
         auto name = it->second->GetName();
         resources.erase(it);
-        name_collections_.erase(name);
+        name_ids_.erase(name);
         std::cout << ">>> [Remove] Collection " << id << std::endl;
-        return true;
+        return Status::OK();
     }
 
     template <typename ResourceT>
@@ -188,38 +186,42 @@ class Store {
         return ids;
     }
 
-    CollectionPtr
-    CreateCollection(Collection&& collection) {
+    Status
+    CreateCollection(Collection&& collection, CollectionPtr& return_v) {
         auto& resources = std::get<Collection::MapT>(resources_);
+        if (!collection.HasAssigned()
+             && (name_ids_.find(collection.GetName()) != name_ids_.end())
+             && (resources[name_ids_[collection.GetName()]]->IsActive())
+             && !collection.IsDeactive()) {
+            return Status(40070, "Duplcated");
+        }
         auto c = std::make_shared<Collection>(collection);
         auto& id = std::get<Index<Collection::MapT, MockResourcesT>::value>(ids_);
         c->SetID(++id);
         c->ResetCnt();
         resources[c->GetID()] = c;
-        name_collections_[c->GetName()] = c;
-        CollectionPtr value;
-        GetResource<Collection>(c->GetID(), value);
-        return value;
+        name_ids_[c->GetName()] = c->GetID();
+        GetResource<Collection>(c->GetID(), return_v);
+        return Status::OK();
     }
 
     template <typename ResourceT>
-    typename ResourceT::Ptr
-    UpdateResource(ResourceT&& resource) {
+    Status
+    UpdateResource(ResourceT&& resource, typename ResourceT::Ptr& return_v) {
         auto& resources = std::get<typename ResourceT::MapT>(resources_);
         auto res = std::make_shared<ResourceT>(resource);
         auto& id = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(ids_);
         res->ResetCnt();
         resources[res->GetID()] = res;
-        typename ResourceT::Ptr value;
-        GetResource<ResourceT>(res->GetID(), value);
-        return value;
+        GetResource<ResourceT>(res->GetID(), return_v);
+        return Status::OK();
     }
 
     template <typename ResourceT>
-    typename ResourceT::Ptr
-    CreateResource(ResourceT&& resource) {
+    Status
+    CreateResource(ResourceT&& resource, typename ResourceT::Ptr& return_v) {
         if (resource.HasAssigned()) {
-            return UpdateResource<ResourceT>(std::move(resource));
+            return UpdateResource<ResourceT>(std::move(resource), return_v);
         }
         auto& resources = std::get<typename ResourceT::MapT>(resources_);
         auto res = std::make_shared<ResourceT>(resource);
@@ -227,16 +229,15 @@ class Store {
         res->SetID(++id);
         res->ResetCnt();
         resources[res->GetID()] = res;
-        typename ResourceT::Ptr value;
-        GetResource<ResourceT>(res->GetID(), value);
-        return value;
+        GetResource<ResourceT>(res->GetID(), return_v);
+        return Status::OK();
     }
 
     void
     DoReset() {
         ids_ = MockIDST();
         resources_ = MockResourcesT();
-        name_collections_.clear();
+        name_ids_.clear();
     }
 
     void
@@ -276,33 +277,87 @@ class Store {
 
     Store() {
         register_any_visitor<Collection::Ptr>([this](auto c) {
-            auto n = CreateResource<Collection>(Collection(*c));
+            CollectionPtr n;
+            CreateResource<Collection>(Collection(*c), n);
             return n->GetID();
         });
         register_any_visitor<CollectionCommit::Ptr>(
-            [this](auto c) { return CreateResource<CollectionCommit>(CollectionCommit(*c))->GetID(); });
+            [this](auto c) {
+            using T = CollectionCommit;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
         register_any_visitor<SchemaCommit::Ptr>(
-            [this](auto c) { return CreateResource<SchemaCommit>(SchemaCommit(*c))->GetID(); });
-        register_any_visitor<FieldCommit::Ptr>(
-            [this](auto c) { return CreateResource<FieldCommit>(FieldCommit(*c))->GetID(); });
-        register_any_visitor<Field::Ptr>([this](auto c) { return CreateResource<Field>(Field(*c))->GetID(); });
-        register_any_visitor<FieldElement::Ptr>(
-            [this](auto c) { return CreateResource<FieldElement>(FieldElement(*c))->GetID(); });
-        register_any_visitor<PartitionCommit::Ptr>(
-            [this](auto c) { return CreateResource<PartitionCommit>(PartitionCommit(*c))->GetID(); });
-        register_any_visitor<Partition::Ptr>(
-            [this](auto c) { return CreateResource<Partition>(Partition(*c))->GetID(); });
-        register_any_visitor<Segment::Ptr>([this](auto c) { return CreateResource<Segment>(Segment(*c))->GetID(); });
-        register_any_visitor<SegmentCommit::Ptr>(
-            [this](auto c) { return CreateResource<SegmentCommit>(SegmentCommit(*c))->GetID(); });
+            [this](auto c) {
+            using T = SchemaCommit;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<FieldCommit::Ptr>([this](auto c) {
+            using T = FieldCommit;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<Field::Ptr>([this](auto c) {
+            using T = Field;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<FieldElement::Ptr>([this](auto c) {
+            using T = FieldElement;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<PartitionCommit::Ptr>([this](auto c) {
+            using T = PartitionCommit;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<Partition::Ptr>([this](auto c) {
+            using T = Partition;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<Segment::Ptr>([this](auto c) {
+            using T = Segment;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
+        register_any_visitor<SegmentCommit::Ptr>([this](auto c) {
+            using T = SegmentCommit;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
+            return n->GetID();
+        });
         register_any_visitor<SegmentFile::Ptr>([this](auto c) {
-            auto n = CreateResource<SegmentFile>(SegmentFile(*c));
+            using T = SegmentFile;
+            using PtrT = typename T::Ptr;
+            PtrT n;
+            CreateResource<T>(T(*c), n);
             return n->GetID();
         });
     }
 
     void
     DoMock() {
+        Status status;
         unsigned int seed = 123;
         auto random = rand_r(&seed) % 2 + 4;
         std::vector<std::any> all_records;
@@ -312,7 +367,8 @@ class Store {
 
             auto tc = Collection(name.str());
             tc.Activate();
-            auto c = CreateCollection(std::move(tc));
+            CollectionPtr c;
+            CreateCollection(std::move(tc), c);
             all_records.push_back(c);
 
             MappingT schema_c_m;
@@ -320,7 +376,8 @@ class Store {
             for (auto fi = 1; fi <= random_fields; ++fi) {
                 std::stringstream fname;
                 fname << "f_" << fi << "_" << std::get<Index<Field::MapT, MockResourcesT>::value>(ids_) + 1;
-                auto field = CreateResource<Field>(Field(fname.str(), fi));
+                FieldPtr field;
+                CreateResource<Field>(Field(fname.str(), fi), field);
                 all_records.push_back(field);
                 MappingT f_c_m = {};
 
@@ -330,17 +387,19 @@ class Store {
                     fename << "fe_" << fei << "_";
                     fename << std::get<Index<FieldElement::MapT, MockResourcesT>::value>(ids_) + 1;
 
-                    auto element =
-                        CreateResource<FieldElement>(FieldElement(c->GetID(), field->GetID(), fename.str(), fei));
+                    FieldElementPtr element;
+                    CreateResource<FieldElement>(FieldElement(c->GetID(), field->GetID(), fename.str(), fei), element);
                     all_records.push_back(element);
                     f_c_m.insert(element->GetID());
                 }
-                auto f_c = CreateResource<FieldCommit>(FieldCommit(c->GetID(), field->GetID(), f_c_m));
+                FieldCommitPtr f_c;
+                CreateResource<FieldCommit>(FieldCommit(c->GetID(), field->GetID(), f_c_m), f_c);
                 all_records.push_back(f_c);
                 schema_c_m.insert(f_c->GetID());
             }
 
-            auto schema = CreateResource<SchemaCommit>(SchemaCommit(c->GetID(), schema_c_m));
+            SchemaCommitPtr schema;
+            CreateResource<SchemaCommit>(SchemaCommit(c->GetID(), schema_c_m), schema);
             all_records.push_back(schema);
 
             auto random_partitions = rand_r(&seed) % 2 + 1;
@@ -348,13 +407,15 @@ class Store {
             for (auto pi = 1; pi <= random_partitions; ++pi) {
                 std::stringstream pname;
                 pname << "p_" << i << "_" << std::get<Index<Partition::MapT, MockResourcesT>::value>(ids_) + 1;
-                auto p = CreateResource<Partition>(Partition(pname.str(), c->GetID()));
+                PartitionPtr p;
+                CreateResource<Partition>(Partition(pname.str(), c->GetID()), p);
                 all_records.push_back(p);
 
                 auto random_segments = rand_r(&seed) % 2 + 1;
                 MappingT p_c_m;
                 for (auto si = 1; si <= random_segments; ++si) {
-                    auto s = CreateResource<Segment>(Segment(p->GetID(), si));
+                    SegmentPtr s;
+                    CreateResource<Segment>(Segment(p->GetID(), si), s);
                     all_records.push_back(s);
                     auto& schema_m = schema->GetMappings();
                     MappingT s_c_m;
@@ -362,22 +423,25 @@ class Store {
                         auto& field_commit = std::get<FieldCommit::MapT>(resources_)[field_commit_id];
                         auto& f_c_m = field_commit->GetMappings();
                         for (auto field_element_id : f_c_m) {
-                            auto sf = CreateResource<SegmentFile>(SegmentFile(p->GetID(), s->GetID(), field_commit_id));
+                            SegmentFilePtr sf;
+                            CreateResource<SegmentFile>(SegmentFile(p->GetID(), s->GetID(), field_commit_id), sf);
                             all_records.push_back(sf);
 
                             s_c_m.insert(sf->GetID());
                         }
                     }
-                    auto s_c =
-                        CreateResource<SegmentCommit>(SegmentCommit(schema->GetID(), p->GetID(), s->GetID(), s_c_m));
+                    SegmentCommitPtr s_c;
+                    CreateResource<SegmentCommit>(SegmentCommit(schema->GetID(), p->GetID(), s->GetID(), s_c_m), s_c);
                     all_records.push_back(s_c);
                     p_c_m.insert(s_c->GetID());
                 }
-                auto p_c = CreateResource<PartitionCommit>(PartitionCommit(c->GetID(), p->GetID(), p_c_m));
+                PartitionCommitPtr p_c;
+                CreateResource<PartitionCommit>(PartitionCommit(c->GetID(), p->GetID(), p_c_m), p_c);
                 all_records.push_back(p_c);
                 c_c_m.insert(p_c->GetID());
             }
-            auto c_c = CreateResource<CollectionCommit>(CollectionCommit(c->GetID(), schema->GetID(), c_c_m));
+            CollectionCommitPtr c_c;
+            CreateResource<CollectionCommit>(CollectionCommit(c->GetID(), schema->GetID(), c_c_m), c_c);
             all_records.push_back(c_c);
         }
         for (auto& record : all_records) {
@@ -393,7 +457,7 @@ class Store {
 
     MockResourcesT resources_;
     MockIDST ids_;
-    std::map<std::string, CollectionPtr> name_collections_;
+    std::map<std::string, ID_TYPE> name_ids_;
     std::unordered_map<std::type_index, std::function<ID_TYPE(std::any const&)>> any_flush_vistors_;
 };
 

@@ -305,7 +305,12 @@ CreateCollectionOperation::CreateCollectionOperation(const CreateCollectionConte
 Status
 CreateCollectionOperation::DoExecute(Store& store) {
     // TODO: Do some checks
-    auto collection = store.CreateCollection(Collection(context_.collection->GetName()));
+    CollectionPtr collection;
+    auto status = store.CreateCollection(Collection(context_.collection->GetName()), collection);
+    if (!status.ok()) {
+        std::cerr << status.ToString() << std::endl;
+        return status;
+    }
     AddStep(*collection);
     MappingT field_commit_ids = {};
     auto field_idx = 0;
@@ -313,33 +318,47 @@ CreateCollectionOperation::DoExecute(Store& store) {
         field_idx++;
         auto& field_schema = field_kv.first;
         auto& field_elements = field_kv.second;
-        auto field = store.CreateResource<Field>(Field(field_schema->GetName(), field_idx));
+        FieldPtr field;
+        status = store.CreateResource<Field>(Field(field_schema->GetName(), field_idx), field);
         AddStep(*field);
         MappingT element_ids = {};
-        auto raw_element = store.CreateResource<FieldElement>(
-            FieldElement(collection->GetID(), field->GetID(), "RAW", FieldElementType::RAW));
+        FieldElementPtr raw_element;
+        status = store.CreateResource<FieldElement>(
+            FieldElement(collection->GetID(), field->GetID(), "RAW", FieldElementType::RAW),
+            raw_element);
         AddStep(*raw_element);
         element_ids.insert(raw_element->GetID());
         for (auto& element_schema : field_elements) {
-            auto element = store.CreateResource<FieldElement>(FieldElement(
-                collection->GetID(), field->GetID(), element_schema->GetName(), element_schema->GetFtype()));
+            FieldElementPtr element;
+            status = store.CreateResource<FieldElement>(FieldElement(
+                collection->GetID(), field->GetID(), element_schema->GetName(), element_schema->GetFtype()),
+                    element);
             AddStep(*element);
             element_ids.insert(element->GetID());
         }
-        auto field_commit =
-            store.CreateResource<FieldCommit>(FieldCommit(collection->GetID(), field->GetID(), element_ids));
+        FieldCommitPtr field_commit;
+        status =
+            store.CreateResource<FieldCommit>(FieldCommit(collection->GetID(), field->GetID(), element_ids),
+                    field_commit);
         AddStep(*field_commit);
         field_commit_ids.insert(field_commit->GetID());
     }
-    auto schema_commit = store.CreateResource<SchemaCommit>(SchemaCommit(collection->GetID(), field_commit_ids));
+    SchemaCommitPtr schema_commit;
+    status = store.CreateResource<SchemaCommit>(SchemaCommit(collection->GetID(), field_commit_ids),
+            schema_commit);
     AddStep(*schema_commit);
-    auto partition = store.CreateResource<Partition>(Partition("_default", collection->GetID()));
+    PartitionPtr partition;
+    status = store.CreateResource<Partition>(Partition("_default", collection->GetID()), partition);
     AddStep(*partition);
-    auto partition_commit =
-        store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()));
+    PartitionCommitPtr partition_commit;
+    status =
+        store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()),
+                partition_commit);
     AddStep(*partition_commit);
-    auto collection_commit = store.CreateResource<CollectionCommit>(
-        CollectionCommit(collection->GetID(), schema_commit->GetID(), {partition_commit->GetID()}));
+    CollectionCommitPtr collection_commit;
+    status = store.CreateResource<CollectionCommit>(
+        CollectionCommit(collection->GetID(), schema_commit->GetID(), {partition_commit->GetID()}),
+        collection_commit);
     AddStep(*collection_commit);
     context_.collection_commit = collection_commit;
     return Status::OK();
