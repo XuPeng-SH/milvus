@@ -35,9 +35,6 @@ class CollectionCommitOperation : public CommitOperation<CollectionCommit> {
     DoExecute(Store&) override;
 };
 
-/*
- * Context: new_segment_commit@requried stale_segments@optional
- */
 class PartitionCommitOperation : public CommitOperation<PartitionCommit> {
  public:
     using BaseT = CommitOperation<PartitionCommit>;
@@ -49,11 +46,11 @@ class PartitionCommitOperation : public CommitOperation<PartitionCommit> {
 
     Status
     DoExecute(Store&) override;
+
+    Status
+    PreCheck() override;
 };
 
-/*
- * Context: new_segment_files@requried stale_segment_file@optional
- */
 class SegmentCommitOperation : public CommitOperation<SegmentCommit> {
  public:
     using BaseT = CommitOperation<SegmentCommit>;
@@ -65,11 +62,11 @@ class SegmentCommitOperation : public CommitOperation<SegmentCommit> {
 
     Status
     DoExecute(Store&) override;
+
+    Status
+    PreCheck() override;
 };
 
-/*
- * Context: prev_partition@requried
- */
 class SegmentOperation : public CommitOperation<Segment> {
  public:
     using BaseT = CommitOperation<Segment>;
@@ -78,6 +75,9 @@ class SegmentOperation : public CommitOperation<Segment> {
 
     Status
     DoExecute(Store& store) override;
+
+    Status
+    PreCheck() override;
 };
 
 class SegmentFileOperation : public CommitOperation<SegmentFile> {

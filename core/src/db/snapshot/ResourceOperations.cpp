@@ -45,6 +45,14 @@ PartitionCommitOperation::PartitionCommitOperation(const OperationContext& conte
     : BaseT(context, collection_id, commit_id) {
 }
 
+Status
+PartitionCommitOperation::PreCheck() {
+    if (!context_.new_segment_commit) {
+        return Status(40020, "Invalid PartitionCommitOperation Context");
+    }
+    return Status::OK();
+}
+
 PartitionCommitPtr
 PartitionCommitOperation::GetPrevResource() const {
     auto& segment_commit = context_.new_segment_commit;
@@ -102,6 +110,12 @@ SegmentOperation::SegmentOperation(const OperationContext& context, ID_TYPE coll
 }
 
 Status
+SegmentOperation::PreCheck() {
+    if (!context_.prev_partition) return Status(40060, "Invalid SegmentOperation Context");
+    return Status::OK();
+}
+
+Status
 SegmentOperation::DoExecute(Store& store) {
     if (!context_.prev_partition) {
         return Status(40020, "Invalid SegmentOperation Context");
@@ -132,6 +146,14 @@ SegmentCommitOperation::DoExecute(Store& store) {
         resource_->GetMappings().insert(new_segment_file->GetID());
     }
     AddStep(*resource_, false);
+    return Status::OK();
+}
+
+Status
+SegmentCommitOperation::PreCheck() {
+    if (context_.new_segment_files.size() == 0) {
+        return Status(40020, "Invalid SegmentCommitOperation Context");
+    }
     return Status::OK();
 }
 
