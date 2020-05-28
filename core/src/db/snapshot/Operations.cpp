@@ -48,9 +48,7 @@ Operations::SetStatus(const Status& status) {
 Status
 Operations::WaitToFinish() {
     std::unique_lock<std::mutex> lock(finish_mtx_);
-    /* std::cout << std::this_thread::get_id() << " Start Waiting Operation " << this->GetID() << std::endl; */
     finish_cond_.wait(lock, [this] { return done_; });
-    /* std::cout << std::this_thread::get_id() << " End   Waiting Operation " << this->GetID() << std::endl; */
     return status_;
 }
 
@@ -58,7 +56,6 @@ void
 Operations::Done() {
     std::unique_lock<std::mutex> lock(finish_mtx_);
     done_ = true;
-    /* std::cout << std::this_thread::get_id() << " Done Operation " << this->GetID() << std::endl; */
     finish_cond_.notify_all();
 }
 
@@ -80,14 +77,29 @@ Operations::IsStale() const {
 }
 
 Status
-Operations::GetSnapshot(ScopedSnapshotT& ss) const {
-    // PXU TODO: Check is result ready or valid
+Operations::DoneRequired() const {
+    Status status;
     if (!done_) {
-        return Status(40031, "Operation is not done");
+        status = Status(40031, "Operation is expected to be done");
     }
+    return status;
+}
+
+Status
+Operations::IDSNotEmptyRequried() const {
+    Status status;
     if (ids_.size() == 0)
-        return Status(40032, "No Snapshot is available");
-    auto status = Snapshots::GetInstance().GetSnapshot(ss, prev_ss_->GetCollectionId(), ids_.back());
+        status = Status(40032, "No Snapshot is available");
+    return status;
+}
+
+Status
+Operations::GetSnapshot(ScopedSnapshotT& ss) const {
+    auto status = DoneRequired();
+    if (!status.ok()) return status;
+    status = IDSNotEmptyRequried();
+    if (!status.ok()) return status;
+    status = Snapshots::GetInstance().GetSnapshot(ss, prev_ss_->GetCollectionId(), ids_.back());
     return status;
 }
 
