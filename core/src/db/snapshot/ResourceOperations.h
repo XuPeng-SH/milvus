@@ -103,12 +103,13 @@ class LoadOperation<Collection> : public Operations {
     Status
     ApplyToStore(Store& store) override {
         if (done_) return status_;
+        Status status;
         if (context_.id == 0 && context_.name != "") {
             resource_ = store.GetCollection(context_.name);
         } else {
-            resource_ = store.GetResource<Collection>(context_.id);
+            status = store.GetResource<Collection>(context_.id, resource_);
         }
-        SetStatus(Status::OK());
+        SetStatus(status);
         Done();
         return status_;
     }

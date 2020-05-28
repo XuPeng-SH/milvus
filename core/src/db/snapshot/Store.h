@@ -98,17 +98,18 @@ class Store {
     }
 
     template <typename ResourceT>
-    std::shared_ptr<ResourceT>
-    GetResource(ID_TYPE id) {
+    Status
+    GetResource(ID_TYPE id, typename ResourceT::Ptr& return_v) {
+        return_v = nullptr;
         auto& resources = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
-            return nullptr;
+            return Status(40012, "DB resource not found");
         }
         auto& c = it->second;
-        auto ret = std::make_shared<ResourceT>(*c);
-        std::cout << "<<< [Load] " << ResourceT::Name << " " << id << " IsActive=" << ret->IsActive() << std::endl;
-        return ret;
+        return_v = std::make_shared<ResourceT>(*c);
+        std::cout << "<<< [Load] " << ResourceT::Name << " " << id << " IsActive=" << return_v->IsActive() << std::endl;
+        return Status::OK();
     }
 
     CollectionPtr
@@ -197,7 +198,9 @@ class Store {
         c->ResetCnt();
         resources[c->GetID()] = c;
         name_collections_[c->GetName()] = c;
-        return GetResource<Collection>(c->GetID());
+        CollectionPtr value;
+        GetResource<Collection>(c->GetID(), value);
+        return value;
     }
 
     template <typename ResourceT>
@@ -208,7 +211,9 @@ class Store {
         auto& id = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(ids_);
         res->ResetCnt();
         resources[res->GetID()] = res;
-        return GetResource<ResourceT>(res->GetID());
+        typename ResourceT::Ptr value;
+        GetResource<ResourceT>(res->GetID(), value);
+        return value;
     }
 
     template <typename ResourceT>
@@ -223,46 +228,10 @@ class Store {
         res->SetID(++id);
         res->ResetCnt();
         resources[res->GetID()] = res;
-        return GetResource<ResourceT>(res->GetID());
+        typename ResourceT::Ptr value;
+        GetResource<ResourceT>(res->GetID(), value);
+        return value;
     }
-
-    /* CollectionPtr CreateCollection(const schema::CollectionSchemaPB& collection_schema) { */
-    /*     auto collection = CreateCollection(Collection(collection_schema.name())); */
-    /*     MappingT field_commit_ids = {}; */
-    /*     for (auto i=0; i<collection_schema.fields_size(); ++i) { */
-    /*         auto field_schema = collection_schema.fields(i); */
-    /*         auto& field_name = field_schema.name(); */
-    /*         auto& field_info = field_schema.info(); */
-    /*         auto field_type = field_info.type(); */
-    /*         auto field = CreateResource<Field>(Field(field_name, i)); */
-    /*         MappingT element_ids = {}; */
-    /*         auto raw_element = CreateResource<FieldElement>(FieldElement(collection->GetID(), */
-    /*                     field->GetID(), "RAW", 1)); */
-    /*         element_ids.insert(raw_element->GetID()); */
-    /*         for(auto j=0; j<field_schema.elements_size(); ++j) { */
-    /*             auto element_schema = field_schema.elements(j); */
-    /*             auto& element_name = element_schema.name(); */
-    /*             auto& element_info = element_schema.info(); */
-    /*             auto element_type = element_info.type(); */
-    /*             auto element = CreateResource<FieldElement>(FieldElement(collection->GetID(), field->GetID(), */
-    /*                         element_name, element_type)); */
-    /*             element_ids.insert(element->GetID()); */
-    /*         } */
-    /*         auto field_commit = CreateResource<FieldCommit>(FieldCommit(collection->GetID(),
-     *         field->GetID(), element_ids)); */
-    /*         field_commit_ids.insert(field_commit->GetID()); */
-    /*     } */
-    /*     auto schema_commit = CreateResource<SchemaCommit>(SchemaCommit(collection->GetID(), field_commit_ids)); */
-
-    /*     MappingT empty_mappings = {}; */
-    /*     auto partition = CreateResource<Partition>(Partition("_default", collection->GetID())); */
-    /*     auto partition_commit = CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(),
-     *     partition->GetID(), */
-    /*                 empty_mappings)); */
-    /*     auto collection_commit = CreateResource<CollectionCommit>(CollectionCommit(collection->GetID(), */
-    /*                 schema_commit->GetID(), {partition_commit->GetID()})); */
-    /*     return collection; */
-    /* } */
 
     void
     DoReset() {

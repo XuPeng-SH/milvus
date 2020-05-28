@@ -30,20 +30,8 @@ namespace snapshot {
 
 using StepsT = std::vector<std::any>;
 
-/* enum OpStatus { */
-/*     OP_PENDING = 0, */
-/*     OP_OK, */
-/*     OP_STALE_OK, */
-/*     OP_STALE_CANCEL, */
-/*     OP_STALE_RESCHEDULE, */
-/*     OP_FAIL_INVALID_PARAMS, */
-/*     OP_FAIL_DUPLICATED, */
-/*     OP_FAIL_FLUSH_META */
-/* }; */
-
 class Operations : public std::enable_shared_from_this<Operations> {
  public:
-    /* static constexpr const char* Name = Derived::Name; */
     Operations(const OperationContext& context, ScopedSnapshotT prev_ss);
     Operations(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
@@ -151,9 +139,6 @@ class CommitOperation : public Operations {
         return resource_;
     }
 
-    // PXU TODO
-    /* virtual void OnFailed() */
-
  protected:
     typename ResourceT::Ptr resource_;
 };
@@ -168,8 +153,8 @@ class LoadOperation : public Operations {
     Status
     ApplyToStore(Store& store) override {
         if (done_) return status_;
-        resource_ = store.GetResource<ResourceT>(context_.id);
-        SetStatus(Status::OK());
+        auto status = store.GetResource<ResourceT>(context_.id, resource_);
+        SetStatus(status);
         Done();
         return status_;
     }
