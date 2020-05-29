@@ -29,6 +29,7 @@ namespace engine {
 namespace snapshot {
 
 using StepsT = std::vector<std::any>;
+using CheckStaleFunc = std::function<Status(ScopedSnapshotT&)>;
 
 class Operations : public std::enable_shared_from_this<Operations> {
  public:
@@ -40,8 +41,10 @@ class Operations : public std::enable_shared_from_this<Operations> {
         return prev_ss_;
     }
 
-    virtual bool
-    IsStale() const;
+    virtual Status
+    CheckStale(const CheckStaleFunc& checker = nullptr) const;
+    virtual Status
+    DoCheckStale(ScopedSnapshotT& latest_snapshot) const;
 
     template <typename StepT>
     void

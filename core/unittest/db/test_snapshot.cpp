@@ -218,11 +218,13 @@ TEST_F(SnapshotTest, ConCurrentCollectionOperation) {
     milvus::engine::snapshot::Store::GetInstance().DoReset();
     std::string collection_name("c1");
 
+    milvus::engine::snapshot::ID_TYPE stale_ss_id;
     auto worker1 = [&]() {
         milvus::Status status;
         auto ss = CreateCollection(collection_name);
         ASSERT_TRUE(ss);
         ASSERT_EQ(ss->GetName(), collection_name);
+        stale_ss_id = ss->GetID();
         decltype(ss) a_ss;
         status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(a_ss, collection_name);
         ASSERT_TRUE(status.ok());
@@ -230,6 +232,10 @@ TEST_F(SnapshotTest, ConCurrentCollectionOperation) {
         ASSERT_TRUE(!ss->GetCollection()->IsActive());
         status = milvus::engine::snapshot::Snapshots::GetInstance().GetSnapshot(a_ss, collection_name);
         ASSERT_TRUE(!status.ok());
+
+        auto c_c = milvus::engine::snapshot::CollectionCommitsHolder::GetInstance().GetResource(stale_ss_id, false);
+        ASSERT_TRUE(c_c);
+        ASSERT_EQ(c_c->GetID(), stale_ss_id);
     };
     auto worker2 = [&] {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -254,6 +260,9 @@ TEST_F(SnapshotTest, ConCurrentCollectionOperation) {
     t1.join();
     t2.join();
     t3.join();
+
+    auto c_c = milvus::engine::snapshot::CollectionCommitsHolder::GetInstance().GetResource(stale_ss_id, false);
+    ASSERT_TRUE(!c_c);
 }
 
 TEST_F(SnapshotTest, OperationTest) {
@@ -277,11 +286,14 @@ TEST_F(SnapshotTest, OperationTest) {
         /* snapshot::SegmentCommitsHolder::GetInstance().GetResource(prev_segment_commit->GetID()); */
         ASSERT_TRUE(collection_commit);
         to_string = collection_commit->ToString();
+        ASSERT_EQ(to_string, "");
     }
 
     milvus::engine::snapshot::OperationContext merge_ctx;
     std::set<milvus::engine::snapshot::ID_TYPE> stale_segment_commit_ids;
 
+    decltype(sf_context.segment_id) new_seg_id;
+    decltype(ss) new_ss;
     // Check build operation correctness
     {
         milvus::engine::snapshot::OperationContext context;
@@ -347,6 +359,8 @@ TEST_F(SnapshotTest, OperationTest) {
         stale_segment_commit_ids.insert(segment_commit->GetID());
         auto partition = ss->GetResource<milvus::engine::snapshot::Partition>(partition_id);
         merge_ctx.prev_partition = partition;
+        new_seg_id = seg_file->GetSegmentId();
+        new_ss = ss;
     }
 
     ss_id = ss->GetID();
@@ -379,5 +393,18 @@ TEST_F(SnapshotTest, OperationTest) {
         ASSERT_EQ(expected_mappings, new_mappings);
 
         milvus::engine::snapshot::CollectionCommitsHolder::GetInstance().Dump();
+    }
+
+    ss_id = ss->GetID();
+    // Build stale segment
+    {
+        milvus::engine::snapshot::OperationContext context;
+        auto build_op = std::make_shared<milvus::engine::snapshot::BuildOperation>(context, new_ss);
+        milvus::engine::snapshot::SegmentFilePtr seg_file;
+        auto new_sf_context = sf_context;
+        new_sf_context.segment_id = new_seg_id;
+        status = build_op->CommitNewSegmentFile(new_sf_context, seg_file);
+        std::cout << status.ToString() << std::endl;
+        ASSERT_TRUE(!status.ok());
     }
 }

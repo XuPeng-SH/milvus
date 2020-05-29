@@ -32,6 +32,10 @@ class BuildOperation : public Operations {
 
     Status
     CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created);
+
+ protected:
+    Status
+    CheckSegmentStale(ScopedSnapshotT& latest_snapshot, ID_TYPE segment_id) const;
 };
 
 class NewSegmentOperation : public Operations {
