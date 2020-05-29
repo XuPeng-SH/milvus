@@ -82,7 +82,8 @@ Status
 Operations::CheckStale(const CheckStaleFunc& checker) const {
     decltype(prev_ss_) latest_ss;
     auto status = Snapshots::GetInstance().GetSnapshotNoLoad(latest_ss, prev_ss_->GetCollection()->GetID());
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     if (prev_ss_->GetID() != latest_ss->GetID()) {
         if (checker) {
             status = checker(latest_ss);

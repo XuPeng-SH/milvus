@@ -27,8 +27,9 @@ BuildOperation::BuildOperation(const OperationContext& context, ID_TYPE collecti
 Status
 BuildOperation::PreExecute(Store& store) {
     auto status = CheckStale(std::bind(&BuildOperation::CheckSegmentStale, this, std::placeholders::_1,
-                context_.new_segment_files[0]->GetSegmentId()));
-    if (!status.ok()) return status;
+                                       context_.new_segment_files[0]->GetSegmentId()));
+    if (!status.ok())
+        return status;
 
     SegmentCommitOperation op(context_, prev_ss_);
     op(store);
@@ -88,8 +89,7 @@ BuildOperation::DoExecute(Store& store) {
 }
 
 Status
-BuildOperation::CheckSegmentStale(ScopedSnapshotT& latest_snapshot,
-        ID_TYPE segment_id) const {
+BuildOperation::CheckSegmentStale(ScopedSnapshotT& latest_snapshot, ID_TYPE segment_id) const {
     auto segment = latest_snapshot->GetResource<Segment>(segment_id);
     if (!segment) {
         return Status(40100, "BuildOperation target segment is stale");
@@ -99,14 +99,17 @@ BuildOperation::CheckSegmentStale(ScopedSnapshotT& latest_snapshot,
 
 Status
 BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created) {
-    auto status = CheckStale(std::bind(&BuildOperation::CheckSegmentStale, this, std::placeholders::_1,
-                context.segment_id));
-    if (!status.ok()) return status;
+    auto status =
+        CheckStale(std::bind(&BuildOperation::CheckSegmentStale, this, std::placeholders::_1, context.segment_id));
+    if (!status.ok())
+        return status;
     auto new_sf_op = std::make_shared<SegmentFileOperation>(context, prev_ss_);
     status = new_sf_op->Push();
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     status = new_sf_op->GetResource(created);
-    if (!status.ok()) return status;
+    if (!status.ok())
+        return status;
     context_.new_segment_files.push_back(created);
     return status;
 }

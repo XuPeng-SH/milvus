@@ -144,7 +144,8 @@ Snapshots::GetHolder(ID_TYPE collection_id, SnapshotHolderPtr& holder, bool load
         status = GetHolderNoLock(collection_id, holder);
         if (status.ok() && holder)
             return status;
-        if (!load) return status;
+        if (!load)
+            return status;
     }
     status = LoadNoLock(collection_id, holder);
     if (!status.ok())
