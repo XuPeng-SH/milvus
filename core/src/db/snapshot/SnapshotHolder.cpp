@@ -36,9 +36,12 @@ SnapshotHolder::~SnapshotHolder() {
 }
 
 Status
-SnapshotHolder::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE id, bool scoped) {
+SnapshotHolder::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE id, bool scoped, bool load) {
     Status status;
     if (id > max_id_) {
+        if (!load) {
+            return Status(40040, "Specified Snapshot not found");
+        }
         CollectionCommitPtr cc;
         status = LoadNoLock(id, cc);
         if (!status.ok())

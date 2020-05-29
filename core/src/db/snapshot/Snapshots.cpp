@@ -50,6 +50,16 @@ Snapshots::DoDropCollection(ScopedSnapshotT& ss) {
 }
 
 Status
+Snapshots::GetSnapshotNoLoad(ScopedSnapshotT& ss, ID_TYPE collection_id, bool scoped) {
+    SnapshotHolderPtr holder;
+    auto status = GetHolder(collection_id, holder, false);
+    if (!status.ok())
+        return status;
+    status = holder->GetSnapshot(ss, 0, scoped, false);
+    return status;
+}
+
+Status
 Snapshots::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE collection_id, ID_TYPE id, bool scoped) {
     SnapshotHolderPtr holder;
     auto status = GetHolder(collection_id, holder);
@@ -127,13 +137,14 @@ Snapshots::GetHolder(const std::string& name, SnapshotHolderPtr& holder) {
 }
 
 Status
-Snapshots::GetHolder(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
+Snapshots::GetHolder(ID_TYPE collection_id, SnapshotHolderPtr& holder, bool load) {
     Status status;
     {
         std::unique_lock<std::shared_timed_mutex> lock(mutex_);
         status = GetHolderNoLock(collection_id, holder);
         if (status.ok() && holder)
             return status;
+        if (!load) return status;
     }
     status = LoadNoLock(collection_id, holder);
     if (!status.ok())

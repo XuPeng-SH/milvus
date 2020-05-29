@@ -35,7 +35,7 @@ class SnapshotHolder {
     Add(ID_TYPE id);
 
     Status
-    GetSnapshot(ScopedSnapshotT& ss, ID_TYPE id = 0, bool scoped = true);
+    GetSnapshot(ScopedSnapshotT& ss, ID_TYPE id = 0, bool scoped = true, bool load = true);
 
     Status
     SetGCHandler(GCHandler gc_handler) {

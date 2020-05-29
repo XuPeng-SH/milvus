@@ -182,8 +182,10 @@ class LoadOperation : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_)
+        if (done_) {
+            Done();
             return status_;
+        }
         auto status = store.GetResource<ResourceT>(context_.id, resource_);
         SetStatus(status);
         Done();
@@ -246,8 +248,10 @@ class HardDeleteOperation<Collection> : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_)
+        if (done_) {
+            Done();
             return status_;
+        }
         auto status = store.RemoveCollection(id_);
         SetStatus(status);
         Done();

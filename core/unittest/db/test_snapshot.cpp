@@ -363,6 +363,7 @@ TEST_F(SnapshotTest, OperationTest) {
         new_ss = ss;
     }
 
+    milvus::engine::snapshot::SegmentPtr merge_seg;
     ss_id = ss->GetID();
     {
         auto prev_partition_commit = ss->GetPartitionCommitByPartitionId(partition_id);
@@ -376,7 +377,8 @@ TEST_F(SnapshotTest, OperationTest) {
         milvus::engine::snapshot::SegmentFilePtr seg_file;
         status = op->CommitNewSegmentFile(sf_context, seg_file);
         ASSERT_TRUE(status.ok());
-        op->Push();
+        status = op->Push();
+        ASSERT_TRUE(status.ok());
         status = op->GetSnapshot(ss);
         ASSERT_TRUE(ss->GetID() > ss_id);
         ASSERT_TRUE(status.ok());
@@ -393,10 +395,13 @@ TEST_F(SnapshotTest, OperationTest) {
         ASSERT_EQ(expected_mappings, new_mappings);
 
         milvus::engine::snapshot::CollectionCommitsHolder::GetInstance().Dump();
+        merge_seg = new_seg;
     }
 
-    ss_id = ss->GetID();
-    // Build stale segment
+    // 1. New seg1, seg2
+    // 2. Build seg1 start
+    // 3. Merge seg1, seg2 to seg3
+    // 4. Commit new seg file of build operation -> Stale Segment Found Here!
     {
         milvus::engine::snapshot::OperationContext context;
         auto build_op = std::make_shared<milvus::engine::snapshot::BuildOperation>(context, new_ss);
@@ -404,6 +409,26 @@ TEST_F(SnapshotTest, OperationTest) {
         auto new_sf_context = sf_context;
         new_sf_context.segment_id = new_seg_id;
         status = build_op->CommitNewSegmentFile(new_sf_context, seg_file);
+        std::cout << status.ToString() << std::endl;
+        ASSERT_TRUE(!status.ok());
+    }
+
+    // 1. Build start
+    // 2. Commit new seg file of build operation
+    // 3. Drop collection
+    // 4. Commit build operation -> Stale Segment Found Here!
+    {
+        milvus::engine::snapshot::OperationContext context;
+        auto build_op = std::make_shared<milvus::engine::snapshot::BuildOperation>(context, ss);
+        milvus::engine::snapshot::SegmentFilePtr seg_file;
+        auto new_sf_context = sf_context;
+        new_sf_context.segment_id = merge_seg->GetID();
+        status = build_op->CommitNewSegmentFile(new_sf_context, seg_file);
+        ASSERT_TRUE(status.ok());
+
+        auto status = milvus::engine::snapshot::Snapshots::GetInstance().DropCollection(ss->GetName());
+        ASSERT_TRUE(status.ok());
+        status = build_op->Push();
         std::cout << status.ToString() << std::endl;
         ASSERT_TRUE(!status.ok());
     }

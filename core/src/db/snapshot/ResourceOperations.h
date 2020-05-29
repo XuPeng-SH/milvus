@@ -102,8 +102,10 @@ class LoadOperation<Collection> : public Operations {
 
     Status
     ApplyToStore(Store& store) override {
-        if (done_)
+        if (done_) {
+            Done();
             return status_;
+        }
         Status status;
         if (context_.id == 0 && context_.name != "") {
             status = store.GetCollection(context_.name, resource_);

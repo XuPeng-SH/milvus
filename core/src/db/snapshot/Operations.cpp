@@ -81,7 +81,7 @@ Operations::DoCheckStale(ScopedSnapshotT& latest_snapshot) const {
 Status
 Operations::CheckStale(const CheckStaleFunc& checker) const {
     decltype(prev_ss_) latest_ss;
-    auto status = Snapshots::GetInstance().GetSnapshot(latest_ss, prev_ss_->GetCollection()->GetID());
+    auto status = Snapshots::GetInstance().GetSnapshotNoLoad(latest_ss, prev_ss_->GetCollection()->GetID());
     if (!status.ok()) return status;
     if (prev_ss_->GetID() != latest_ss->GetID()) {
         if (checker) {
@@ -136,8 +136,10 @@ Operations::GetSnapshot(ScopedSnapshotT& ss) const {
 
 Status
 Operations::ApplyToStore(Store& store) {
-    if (done_)
+    if (done_) {
+        Done();
         return status_;
+    }
     auto status = OnExecute(store);
     SetStatus(status);
     Done();
