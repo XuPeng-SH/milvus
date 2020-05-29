@@ -103,7 +103,7 @@ class Store {
         auto& resources = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
-            return Status(40012, "DB resource not found");
+            return Status(SS_NOT_FOUND_ERROR, "DB resource not found");
         }
         auto& c = it->second;
         return_v = std::make_shared<ResourceT>(*c);
@@ -115,7 +115,7 @@ class Store {
     GetCollection(const std::string& name, CollectionPtr& return_v) {
         auto it = name_ids_.find(name);
         if (it == name_ids_.end()) {
-            return Status(40012, "DB resource not found");
+            return Status(SS_NOT_FOUND_ERROR, "DB resource not found");
         }
         auto& id = it->second;
         return GetResource<Collection>(id, return_v);
@@ -126,7 +126,7 @@ class Store {
         auto& resources = std::get<Collection::MapT>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
-            return Status(40012, "DB resource not found");
+            return Status(SS_NOT_FOUND_ERROR, "DB resource not found");
         }
 
         auto name = it->second->GetName();
@@ -142,7 +142,7 @@ class Store {
         auto& resources = std::get<Index<typename ResourceT::MapT, MockResourcesT>::value>(resources_);
         auto it = resources.find(id);
         if (it == resources.end()) {
-            return Status(40012, "DB resource not found");
+            return Status(SS_NOT_FOUND_ERROR, "DB resource not found");
         }
 
         resources.erase(it);
@@ -191,7 +191,7 @@ class Store {
         auto& resources = std::get<Collection::MapT>(resources_);
         if (!collection.HasAssigned() && (name_ids_.find(collection.GetName()) != name_ids_.end()) &&
             (resources[name_ids_[collection.GetName()]]->IsActive()) && !collection.IsDeactive()) {
-            return Status(40070, "Duplcated");
+            return Status(SS_DUPLICATED_ERROR, "Duplcated");
         }
         auto c = std::make_shared<Collection>(collection);
         auto& id = std::get<Index<Collection::MapT, MockResourcesT>::value>(ids_);

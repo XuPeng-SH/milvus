@@ -22,6 +22,7 @@
 #include "Context.h"
 #include "db/snapshot/Snapshot.h"
 #include "db/snapshot/Store.h"
+#include "utils/Error.h"
 #include "utils/Status.h"
 
 namespace milvus {
@@ -166,7 +167,7 @@ class CommitOperation : public Operations {
     ResourceNotNullRequired() const {
         Status status;
         if (!resource_)
-            return Status(40060, "No specified resource");
+            return Status(SS_CONSTRAINT_CHECK_ERROR, "No specified resource");
         return status;
     }
 
@@ -212,7 +213,7 @@ class LoadOperation : public Operations {
     ResourceNotNullRequired() const {
         Status status;
         if (!resource_)
-            return Status(40060, "No specified resource");
+            return Status(SS_CONSTRAINT_CHECK_ERROR, "No specified resource");
         return status;
     }
 

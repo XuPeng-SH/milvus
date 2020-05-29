@@ -98,7 +98,7 @@ Status
 Operations::DoneRequired() const {
     Status status;
     if (!done_) {
-        status = Status(40031, "Operation is expected to be done");
+        status = Status(SS_CONSTRAINT_CHECK_ERROR, "Operation is expected to be done");
     }
     return status;
 }
@@ -107,7 +107,7 @@ Status
 Operations::IDSNotEmptyRequried() const {
     Status status;
     if (ids_.size() == 0)
-        status = Status(40032, "No Snapshot is available");
+        status = Status(SS_CONSTRAINT_CHECK_ERROR, "No Snapshot is available");
     return status;
 }
 
@@ -115,7 +115,7 @@ Status
 Operations::PrevSnapshotRequried() const {
     Status status;
     if (!prev_ss_) {
-        status = Status(40052, "Prev snapshot is requried");
+        status = Status(SS_CONSTRAINT_CHECK_ERROR, "Prev snapshot is requried");
     }
     return status;
 }

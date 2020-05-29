@@ -126,7 +126,7 @@ class LoadOperation<Collection> : public Operations {
         if (!status.ok())
             return status;
         if (!resource_) {
-            return Status(40060, "No specified resource");
+            return Status(SS_NOT_FOUND_ERROR, "No specified resource");
         }
         res = resource_;
         return status;

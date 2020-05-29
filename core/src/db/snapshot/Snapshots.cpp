@@ -22,7 +22,6 @@ Snapshots::DropCollection(ID_TYPE collection_id) {
     auto status = GetSnapshot(ss, collection_id);
     if (!status.ok())
         return status;
-    /* return Status(40004, "Collection not found"); */
     return DoDropCollection(ss);
 }
 
@@ -94,7 +93,7 @@ Snapshots::LoadNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
     op->Push();
     auto& collection_commit_ids = op->GetIDs();
     if (collection_commit_ids.size() == 0) {
-        return Status(40030, "No collection commit found");
+        return Status(SS_NOT_FOUND_ERROR, "No collection commit found");
     }
     holder = std::make_shared<SnapshotHolder>(collection_id,
                                               std::bind(&Snapshots::SnapshotGCCallback, this, std::placeholders::_1));
@@ -165,7 +164,7 @@ Status
 Snapshots::GetHolderNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder) {
     auto it = holders_.find(collection_id);
     if (it == holders_.end()) {
-        return Status(40040, "Specified snapshot holder not found");
+        return Status(SS_NOT_FOUND_ERROR, "Specified snapshot holder not found");
     }
     holder = it->second;
     return Status::OK();
@@ -177,7 +176,7 @@ Snapshots::Reset() {
     holders_.clear();
     name_id_map_.clear();
     to_release_.clear();
-    return Status();
+    return Status::OK();
 }
 
 void

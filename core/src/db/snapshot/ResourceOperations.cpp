@@ -20,7 +20,7 @@ Status
 CollectionCommitOperation::DoExecute(Store& store) {
     auto prev_resource = GetPrevResource();
     if (!prev_resource)
-        return Status(40020, "Invalid CollectionCommitOperation Context");
+        return Status(SS_INVALID_CONTEX_ERROR, "Invalid CollectionCommitOperation Context");
     resource_ = std::make_shared<CollectionCommit>(*prev_resource);
     resource_->ResetStatus();
     if (context_.new_partition_commit) {
@@ -48,7 +48,7 @@ PartitionCommitOperation::PartitionCommitOperation(const OperationContext& conte
 Status
 PartitionCommitOperation::PreCheck() {
     if (!context_.new_segment_commit) {
-        return Status(40020, "Invalid PartitionCommitOperation Context");
+        return Status(SS_INVALID_CONTEX_ERROR, "Invalid PartitionCommitOperation Context");
     }
     return Status::OK();
 }
@@ -112,14 +112,14 @@ SegmentOperation::SegmentOperation(const OperationContext& context, ID_TYPE coll
 Status
 SegmentOperation::PreCheck() {
     if (!context_.prev_partition)
-        return Status(40060, "Invalid SegmentOperation Context");
+        return Status(SS_INVALID_CONTEX_ERROR, "Invalid SegmentOperation Context");
     return Status::OK();
 }
 
 Status
 SegmentOperation::DoExecute(Store& store) {
     if (!context_.prev_partition) {
-        return Status(40020, "Invalid SegmentOperation Context");
+        return Status(SS_INVALID_CONTEX_ERROR, "Invalid SegmentOperation Context");
     }
     auto prev_num = prev_ss_->GetMaxSegmentNumByPartition(context_.prev_partition->GetID());
     resource_ = std::make_shared<Segment>(context_.prev_partition->GetID(), prev_num + 1);
@@ -153,7 +153,7 @@ SegmentCommitOperation::DoExecute(Store& store) {
 Status
 SegmentCommitOperation::PreCheck() {
     if (context_.new_segment_files.size() == 0) {
-        return Status(40020, "Invalid SegmentCommitOperation Context");
+        return Status(SS_INVALID_CONTEX_ERROR, "Invalid SegmentCommitOperation Context");
     }
     return Status::OK();
 }

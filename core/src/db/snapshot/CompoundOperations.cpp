@@ -92,7 +92,7 @@ Status
 BuildOperation::CheckSegmentStale(ScopedSnapshotT& latest_snapshot, ID_TYPE segment_id) const {
     auto segment = latest_snapshot->GetResource<Segment>(segment_id);
     if (!segment) {
-        return Status(40100, "BuildOperation target segment is stale");
+        return Status(SS_STALE_ERROR, "BuildOperation target segment is stale");
     }
     return Status::OK();
 }
@@ -402,7 +402,7 @@ CreateCollectionOperation::GetSnapshot(ScopedSnapshotT& ss) const {
     if (!status.ok())
         return status;
     if (!context_.collection_commit)
-        return Status(40032, "No Snapshot is available");
+        return Status(SS_CONSTRAINT_CHECK_ERROR, "No Snapshot is available");
     status = Snapshots::GetInstance().GetSnapshot(ss, context_.collection_commit->GetCollectionId());
     return status;
 }
@@ -410,7 +410,7 @@ CreateCollectionOperation::GetSnapshot(ScopedSnapshotT& ss) const {
 Status
 SoftDeleteCollectionOperation::DoExecute(Store& store) {
     if (!context_.collection) {
-        return Status(40006, "Invalid Context");
+        return Status(SS_INVALID_CONTEX_ERROR, "Invalid Context");
     }
     context_.collection->Deactivate();
     AddStep(*context_.collection);

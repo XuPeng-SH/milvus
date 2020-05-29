@@ -40,7 +40,7 @@ SnapshotHolder::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE id, bool scoped, bool l
     Status status;
     if (id > max_id_) {
         if (!load) {
-            return Status(40040, "Specified Snapshot not found");
+            return Status(SS_NOT_FOUND_ERROR, "Specified Snapshot not found");
         }
         CollectionCommitPtr cc;
         status = LoadNoLock(id, cc);
@@ -60,12 +60,12 @@ SnapshotHolder::GetSnapshot(ScopedSnapshotT& ss, ID_TYPE id, bool scoped, bool l
         return status;
     }
     if (id < min_id_) {
-        return Status(40050, "Get stale snapshot");
+        return Status(SS_STALE_ERROR, "Get stale snapshot");
     }
 
     auto it = active_.find(id);
     if (it == active_.end()) {
-        return Status(40040, "Specified Snapshot not found");
+        return Status(SS_NOT_FOUND_ERROR, "Specified Snapshot not found");
     }
     ss = ScopedSnapshotT(it->second, scoped);
     return status;
@@ -86,11 +86,11 @@ SnapshotHolder::Add(ID_TYPE id) {
     {
         std::unique_lock<std::mutex> lock(mutex_);
         if (active_.size() > 0 && id < max_id_) {
-            return Status(40007, "Invalid ID");
+            return Status(SS_INVALID_ARGUMENT_ERROR, "Invalid ID");
         }
         auto it = active_.find(id);
         if (it != active_.end()) {
-            return Status(40008, "Duplicated ID");
+            return Status(SS_DUPLICATED_ERROR, "Duplicated ID");
         }
     }
     Snapshot::Ptr oldest_ss;
@@ -99,7 +99,7 @@ SnapshotHolder::Add(ID_TYPE id) {
 
         std::unique_lock<std::mutex> lock(mutex_);
         if (!IsActive(ss)) {
-            return Status(40009, "Specified collection is not active now");
+            return Status(SS_NOT_ACTIVE_ERROR, "Specified collection is not active now");
         }
         ss->RegisterOnNoRefCB(std::bind(&Snapshot::UnRefAll, ss));
         ss->Ref();

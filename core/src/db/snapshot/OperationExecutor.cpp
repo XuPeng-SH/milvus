@@ -32,7 +32,7 @@ OperationExecutor::GetInstance() {
 Status
 OperationExecutor::Submit(OperationsPtr operation, bool sync) {
     if (!operation)
-        return Status(40030, "Invalid Operation");
+        return Status(SS_INVALID_ARGUMENT_ERROR, "Invalid Operation");
     /* Store::GetInstance().Apply(*operation); */
     /* return true; */
     Enqueue(operation);
