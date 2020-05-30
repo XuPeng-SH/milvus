@@ -91,6 +91,22 @@ class CreateCollectionOperation : public Operations {
     CreateCollectionContext context_;
 };
 
+class CreatePartitionOperation : public Operations {
+ public:
+    using BaseT = Operations;
+    CreatePartitionOperation(const OperationContext& context, ScopedSnapshotT prev_ss);
+    CreatePartitionOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
+
+    Status
+    CommitNewPartition(const PartitionContext& context, PartitionPtr& partition);
+
+    Status
+    DoExecute(Store&) override;
+
+    Status
+    PreCheck() override;
+};
+
 class GetSnapshotIDsOperation : public Operations {
  public:
     using BaseT = Operations;

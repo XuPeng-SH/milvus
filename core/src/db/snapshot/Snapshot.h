@@ -65,6 +65,11 @@ class Snapshot : public ReferenceProxy {
         return GetResources<Collection>().begin()->second->GetName();
     }
 
+    size_t
+    NumberOfPartitions() const {
+        return GetResources<Partition>().size();
+    }
+
     CollectionCommitPtr
     GetCollectionCommit() {
         return GetResources<CollectionCommit>().begin()->second.Get();

@@ -51,6 +51,22 @@ class PartitionCommitOperation : public CommitOperation<PartitionCommit> {
     PreCheck() override;
 };
 
+class PartitionOperation : public CommitOperation<Partition> {
+ public:
+    using BaseT = CommitOperation<Partition>;
+    PartitionOperation(const PartitionContext& context, ScopedSnapshotT prev_ss);
+    PartitionOperation(const PartitionContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
+
+    Status
+    DoExecute(Store& store) override;
+
+    Status
+    PreCheck() override;
+
+ protected:
+    PartitionContext context_;
+};
+
 class SegmentCommitOperation : public CommitOperation<SegmentCommit> {
  public:
     using BaseT = CommitOperation<SegmentCommit>;

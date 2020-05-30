@@ -331,6 +331,70 @@ GetCollectionIDsOperation::GetIDs() const {
     return ids_;
 }
 
+CreatePartitionOperation::CreatePartitionOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
+    : BaseT(context, prev_ss) {
+}
+CreatePartitionOperation::CreatePartitionOperation(const OperationContext& context, ID_TYPE collection_id,
+                                                   ID_TYPE commit_id)
+    : BaseT(context, collection_id, commit_id) {
+}
+
+Status
+CreatePartitionOperation::PreCheck() {
+    Status status;
+    if (!context_.new_partition) {
+        status = Status(SS_INVALID_CONTEX_ERROR, "No partition specified before push partition");
+    }
+    return status;
+}
+
+Status
+CreatePartitionOperation::CommitNewPartition(const PartitionContext& context, PartitionPtr& partition) {
+    Status status;
+    auto op = std::make_shared<PartitionOperation>(context, prev_ss_);
+    status = op->Push();
+    if (!status.ok())
+        return status;
+    status = op->GetResource(partition);
+    if (!status.ok())
+        return status;
+    context_.new_partition = partition;
+    AddStep(*partition);
+    return status;
+}
+
+Status
+CreatePartitionOperation::DoExecute(Store& store) {
+    Status status;
+    status = CheckStale();
+    if (!status.ok())
+        return status;
+
+    auto collection = prev_ss_->GetCollection();
+    auto partition = context_.new_partition;
+
+    PartitionCommitPtr pc;
+    /* OperationContext pc_context; */
+    /* auto pc_op = std::make_shared<PartitionCommit>(pc_context, prev_ss_); */
+    /* status = pc_op(store); */
+    /* if (!status.ok()) return status; */
+    status = store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()), pc);
+    AddStep(*pc);
+    OperationContext cc_context;
+    cc_context.new_partition_commit = pc;
+    auto cc_op = CollectionCommitOperation(cc_context, prev_ss_);
+    status = cc_op(store);
+    if (!status.ok())
+        return status;
+    CollectionCommitPtr cc;
+    status = cc_op.GetResource(cc);
+    if (!status.ok())
+        return status;
+    AddStep(*cc);
+
+    return status;
+}
+
 CreateCollectionOperation::CreateCollectionOperation(const CreateCollectionContext& context)
     : BaseT(OperationContext(), ScopedSnapshotT()), context_(context) {
 }

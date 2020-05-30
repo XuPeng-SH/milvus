@@ -265,6 +265,39 @@ TEST_F(SnapshotTest, ConCurrentCollectionOperation) {
     ASSERT_TRUE(!c_c);
 }
 
+TEST_F(SnapshotTest, PartitionTest) {
+    milvus::engine::snapshot::Store::GetInstance().DoReset();
+    std::string collection_name("c1");
+    auto ss = CreateCollection(collection_name);
+    ASSERT_TRUE(ss);
+    ASSERT_EQ(ss->GetName(), collection_name);
+    ASSERT_EQ(ss->NumberOfPartitions(), 1);
+
+    milvus::engine::snapshot::OperationContext context;
+    auto op = std::make_shared<milvus::engine::snapshot::CreatePartitionOperation>(context, ss);
+
+    std::string partition_name("p1");
+    milvus::engine::snapshot::PartitionContext p_ctx;
+    p_ctx.name = partition_name;
+    milvus::engine::snapshot::PartitionPtr partition;
+    auto status = op->CommitNewPartition(p_ctx, partition);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(partition);
+    ASSERT_EQ(partition->GetName(), partition_name);
+    ASSERT_TRUE(!partition->IsActive());
+    ASSERT_TRUE(partition->HasAssigned());
+
+    status = op->Push();
+    ASSERT_TRUE(status.ok());
+    decltype(ss) curr_ss;
+    status = op->GetSnapshot(curr_ss);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(curr_ss);
+    ASSERT_EQ(curr_ss->GetName(), ss->GetName());
+    ASSERT_TRUE(curr_ss->GetID() > ss->GetID());
+    ASSERT_EQ(curr_ss->NumberOfPartitions(), 2);
+}
+
 TEST_F(SnapshotTest, OperationTest) {
     milvus::Status status;
     std::string to_string;

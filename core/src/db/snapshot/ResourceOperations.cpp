@@ -26,7 +26,8 @@ CollectionCommitOperation::DoExecute(Store& store) {
     if (context_.new_partition_commit) {
         auto prev_partition_commit =
             prev_ss_->GetPartitionCommitByPartitionId(context_.new_partition_commit->GetPartitionId());
-        resource_->GetMappings().erase(prev_partition_commit->GetID());
+        if (prev_partition_commit)
+            resource_->GetMappings().erase(prev_partition_commit->GetID());
         resource_->GetMappings().insert(context_.new_partition_commit->GetID());
     } else if (context_.new_schema_commit) {
         resource_->SetSchemaId(context_.new_schema_commit->GetID());
@@ -34,6 +35,29 @@ CollectionCommitOperation::DoExecute(Store& store) {
     resource_->SetID(0);
     AddStep(*BaseT::resource_, false);
     return Status::OK();
+}
+
+PartitionOperation::PartitionOperation(const PartitionContext& context, ScopedSnapshotT prev_ss)
+    : BaseT(OperationContext(), prev_ss), context_(context) {
+}
+
+PartitionOperation::PartitionOperation(const PartitionContext& context, ID_TYPE collection_id, ID_TYPE commit_id)
+    : BaseT(OperationContext(), collection_id, commit_id), context_(context) {
+}
+
+Status
+PartitionOperation::PreCheck() {
+    return Status::OK();
+}
+
+Status
+PartitionOperation::DoExecute(Store& store) {
+    auto status = CheckStale();
+    if (!status.ok())
+        return status;
+    resource_ = std::make_shared<Partition>(context_.name, prev_ss_->GetCollection()->GetID());
+    AddStep(*resource_, false);
+    return status;
 }
 
 PartitionCommitOperation::PartitionCommitOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
