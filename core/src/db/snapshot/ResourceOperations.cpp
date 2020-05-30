@@ -23,13 +23,13 @@ CollectionCommitOperation::DoExecute(Store& store) {
         return Status(SS_INVALID_CONTEX_ERROR, "Invalid CollectionCommitOperation Context");
     resource_ = std::make_shared<CollectionCommit>(*prev_resource);
     resource_->ResetStatus();
-    if (context_.new_partition_commit) {
+    if (context_.stale_partition_commit) {
+        resource_->GetMappings().erase(context_.stale_partition_commit->GetID());
+    } else if (context_.new_partition_commit) {
         auto prev_partition_commit =
             prev_ss_->GetPartitionCommitByPartitionId(context_.new_partition_commit->GetPartitionId());
         if (prev_partition_commit)
             resource_->GetMappings().erase(prev_partition_commit->GetID());
-        if (context_.stale_partition_commit)
-            resource_->GetMappings().erase(context_.stale_partition_commit->GetID());
         resource_->GetMappings().insert(context_.new_partition_commit->GetID());
     } else if (context_.new_schema_commit) {
         resource_->SetSchemaId(context_.new_schema_commit->GetID());
@@ -73,15 +73,17 @@ PartitionCommitOperation::PartitionCommitOperation(const OperationContext& conte
 
 Status
 PartitionCommitOperation::PreCheck() {
-    if (!context_.new_segment_commit) {
-        return Status(SS_INVALID_CONTEX_ERROR, "Invalid PartitionCommitOperation Context");
-    }
+    /* if (!context_.new_segment_commit) { */
+    /*     return Status(SS_INVALID_CONTEX_ERROR, "Invalid PartitionCommitOperation Context"); */
+    /* } */
     return Status::OK();
 }
 
 PartitionCommitPtr
 PartitionCommitOperation::GetPrevResource() const {
     auto& segment_commit = context_.new_segment_commit;
+    if (!segment_commit)
+        return nullptr;
     return prev_ss_->GetPartitionCommitByPartitionId(segment_commit->GetPartitionId());
 }
 
@@ -102,11 +104,15 @@ PartitionCommitOperation::DoExecute(Store& store) {
             }
         }
     } else {
-        resource_ = std::make_shared<PartitionCommit>(prev_ss_->GetCollectionId(),
-                                                      context_.new_segment_commit->GetPartitionId());
+        if (!context_.new_partition) {
+            return Status(SS_INVALID_CONTEX_ERROR, "Partition is required");
+        }
+        resource_ = std::make_shared<PartitionCommit>(prev_ss_->GetCollectionId(), context_.new_partition->GetID());
     }
 
-    resource_->GetMappings().insert(context_.new_segment_commit->GetID());
+    if (context_.new_segment_commit) {
+        resource_->GetMappings().insert(context_.new_segment_commit->GetID());
+    }
     AddStep(*resource_, false);
     return Status::OK();
 }

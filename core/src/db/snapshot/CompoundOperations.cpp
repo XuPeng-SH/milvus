@@ -408,11 +408,16 @@ CreatePartitionOperation::DoExecute(Store& store) {
     auto partition = context_.new_partition;
 
     PartitionCommitPtr pc;
-    /* OperationContext pc_context; */
-    /* auto pc_op = std::make_shared<PartitionCommit>(pc_context, prev_ss_); */
-    /* status = pc_op(store); */
-    /* if (!status.ok()) return status; */
-    status = store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()), pc);
+    OperationContext pc_context;
+    pc_context.new_partition = partition;
+    auto pc_op = PartitionCommitOperation(pc_context, prev_ss_);
+    status = pc_op(store);
+    if (!status.ok())
+        return status;
+    status = pc_op.GetResource(pc);
+    if (!status.ok())
+        return status;
+    /* status = store.CreateResource<PartitionCommit>(PartitionCommit(collection->GetID(), partition->GetID()), pc); */
     AddStep(*pc);
     OperationContext cc_context;
     cc_context.new_partition_commit = pc;
