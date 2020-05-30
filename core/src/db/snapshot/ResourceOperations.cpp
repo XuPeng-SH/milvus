@@ -28,6 +28,8 @@ CollectionCommitOperation::DoExecute(Store& store) {
             prev_ss_->GetPartitionCommitByPartitionId(context_.new_partition_commit->GetPartitionId());
         if (prev_partition_commit)
             resource_->GetMappings().erase(prev_partition_commit->GetID());
+        if (context_.stale_partition_commit)
+            resource_->GetMappings().erase(context_.stale_partition_commit->GetID());
         resource_->GetMappings().insert(context_.new_partition_commit->GetID());
     } else if (context_.new_schema_commit) {
         resource_->SetSchemaId(context_.new_schema_commit->GetID());

@@ -349,19 +349,19 @@ DropPartitionOperation::DoExecute(Store& store) {
     auto p_c = prev_ss_->GetPartitionCommitByPartitionId(id);
     if (!p_c)
         return Status(SS_NOT_FOUND_ERROR, "No partition commit found");
-    auto c_c = prev_ss_->GetCollectionCommit();
-    auto mappings = c_c->GetMappings();
-    decltype(mappings) new_mappings(mappings);
-    new_mappings.erase(p_c->GetID());
 
-    CollectionCommitPtr new_c_c;
-    status = store.CreateResource<CollectionCommit>(
-        CollectionCommit(prev_ss_->GetCollection()->GetID(), prev_ss_->GetSchemaCommit()->GetID(), new_mappings),
-        new_c_c);
-
+    OperationContext op_ctx;
+    op_ctx.stale_partition_commit = p_c;
+    auto op = CollectionCommitOperation(op_ctx, prev_ss_);
+    status = op(store);
     if (!status.ok())
         return status;
-    AddStep(*new_c_c);
+    CollectionCommitPtr cc;
+    status = op.GetResource(cc);
+    if (!status.ok())
+        return status;
+
+    AddStep(*cc);
     return status;
 }
 

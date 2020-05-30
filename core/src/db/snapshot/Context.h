@@ -58,6 +58,7 @@ struct OperationContext {
     PartitionPtr prev_partition = nullptr;
     PartitionCommitPtr prev_partition_commit = nullptr;
     CollectionCommitPtr prev_collection_commit = nullptr;
+    PartitionCommitPtr stale_partition_commit = nullptr;
 
     SegmentFile::VecT new_segment_files;
     CollectionPtr collection = nullptr;
