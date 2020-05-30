@@ -296,6 +296,23 @@ TEST_F(SnapshotTest, PartitionTest) {
     ASSERT_EQ(curr_ss->GetName(), ss->GetName());
     ASSERT_TRUE(curr_ss->GetID() > ss->GetID());
     ASSERT_EQ(curr_ss->NumberOfPartitions(), 2);
+
+    auto drop_op = std::make_shared<milvus::engine::snapshot::DropPartitionOperation>(p_ctx, curr_ss);
+    status = drop_op->Push();
+    ASSERT_TRUE(status.ok());
+
+    decltype(ss) latest_ss;
+    status = drop_op->GetSnapshot(latest_ss);
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(latest_ss);
+    ASSERT_EQ(latest_ss->GetName(), ss->GetName());
+    ASSERT_TRUE(latest_ss->GetID() > curr_ss->GetID());
+    ASSERT_EQ(latest_ss->NumberOfPartitions(), 1);
+
+    drop_op = std::make_shared<milvus::engine::snapshot::DropPartitionOperation>(p_ctx, latest_ss);
+    status = drop_op->Push();
+    ASSERT_TRUE(!status.ok());
+    std::cout << status.ToString() << std::endl;
 }
 
 TEST_F(SnapshotTest, OperationTest) {

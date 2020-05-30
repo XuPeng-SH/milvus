@@ -24,6 +24,7 @@ namespace snapshot {
 
 struct PartitionContext {
     std::string name;
+    ID_TYPE id = 0;
 };
 
 struct SegmentFileContext {

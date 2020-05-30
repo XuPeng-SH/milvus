@@ -107,6 +107,18 @@ class CreatePartitionOperation : public Operations {
     PreCheck() override;
 };
 
+class DropPartitionOperation : public Operations {
+ public:
+    using BaseT = Operations;
+    DropPartitionOperation(const PartitionContext& context, ScopedSnapshotT prev_ss);
+
+    Status
+    DoExecute(Store&) override;
+
+ protected:
+    PartitionContext context_;
+};
+
 class GetSnapshotIDsOperation : public Operations {
  public:
     using BaseT = Operations;
@@ -145,7 +157,6 @@ class GetCollectionIDsOperation : public Operations {
 class SoftDeleteCollectionOperation : public Operations {
  public:
     using BaseT = Operations;
-    // TODO: Define error code and msg later
     explicit SoftDeleteCollectionOperation(const OperationContext& context) : BaseT(context, ScopedSnapshotT()) {
     }
 

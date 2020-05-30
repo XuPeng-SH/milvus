@@ -331,6 +331,40 @@ GetCollectionIDsOperation::GetIDs() const {
     return ids_;
 }
 
+DropPartitionOperation::DropPartitionOperation(const PartitionContext& context, ScopedSnapshotT prev_ss)
+    : BaseT(OperationContext(), prev_ss), context_(context) {
+}
+
+Status
+DropPartitionOperation::DoExecute(Store& store) {
+    Status status;
+    PartitionPtr p;
+    auto id = context_.id;
+    if (id == 0) {
+        status = prev_ss_->GetPartitionId(context_.name, id);
+        context_.id = id;
+    }
+    if (!status.ok())
+        return status;
+    auto p_c = prev_ss_->GetPartitionCommitByPartitionId(id);
+    if (!p_c)
+        return Status(SS_NOT_FOUND_ERROR, "No partition commit found");
+    auto c_c = prev_ss_->GetCollectionCommit();
+    auto mappings = c_c->GetMappings();
+    decltype(mappings) new_mappings(mappings);
+    new_mappings.erase(p_c->GetID());
+
+    CollectionCommitPtr new_c_c;
+    status = store.CreateResource<CollectionCommit>(
+        CollectionCommit(prev_ss_->GetCollection()->GetID(), prev_ss_->GetSchemaCommit()->GetID(), new_mappings),
+        new_c_c);
+
+    if (!status.ok())
+        return status;
+    AddStep(*new_c_c);
+    return status;
+}
+
 CreatePartitionOperation::CreatePartitionOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
     : BaseT(context, prev_ss) {
 }
