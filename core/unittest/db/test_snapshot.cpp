@@ -482,4 +482,5 @@ TEST_F(SnapshotTest, OperationTest) {
         std::cout << status.ToString() << std::endl;
         ASSERT_TRUE(!status.ok());
     }
+    milvus::engine::snapshot::Snapshots::GetInstance().Reset();
 }

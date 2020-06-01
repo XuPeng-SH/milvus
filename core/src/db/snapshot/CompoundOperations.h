@@ -27,8 +27,6 @@ class BuildOperation : public Operations {
 
     Status
     DoExecute(Store&) override;
-    Status
-    PreExecute(Store&) override;
 
     Status
     CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created);

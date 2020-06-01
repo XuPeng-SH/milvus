@@ -25,7 +25,7 @@ BuildOperation::BuildOperation(const OperationContext& context, ID_TYPE collecti
 }
 
 Status
-BuildOperation::PreExecute(Store& store) {
+BuildOperation::DoExecute(Store& store) {
     auto status = CheckStale(std::bind(&BuildOperation::CheckSegmentStale, this, std::placeholders::_1,
                                        context_.new_segment_files[0]->GetSegmentId()));
     if (!status.ok())
@@ -36,6 +36,7 @@ BuildOperation::PreExecute(Store& store) {
     status = op.GetResource(context_.new_segment_commit);
     if (!status.ok())
         return status;
+    AddStep(*context_.new_segment_commit);
 
     PartitionCommitOperation pc_op(context_, prev_ss_);
     pc_op(store);
@@ -44,48 +45,23 @@ BuildOperation::PreExecute(Store& store) {
     status = pc_op.GetResource(cc_context.new_partition_commit);
     if (!status.ok())
         return status;
-
-    CollectionCommitOperation cc_op(cc_context, prev_ss_);
-    cc_op(store);
-
-    for (auto& new_segment_file : context_.new_segment_files) {
-        AddStep(*new_segment_file);
-    }
-    AddStep(*context_.new_segment_commit);
+    AddStep(*cc_context.new_partition_commit);
 
     PartitionCommitPtr pc;
     status = pc_op.GetResource(pc);
     if (!status.ok())
         return status;
+    AddStep(*pc);
 
+    CollectionCommitOperation cc_op(cc_context, prev_ss_);
+    cc_op(store);
     CollectionCommitPtr cc;
     status = cc_op.GetResource(cc);
     if (!status.ok())
         return status;
-
-    AddStep(*pc);
     AddStep(*cc);
+
     return status;
-}
-
-Status
-BuildOperation::DoExecute(Store& store) {
-    /* if (!prev_ss_->HasFieldElement(context_.field_name, context_.field_element_name)) { */
-    /*     status_ = OP_FAIL_INVALID_PARAMS; */
-    /*     return false; */
-    /* } */
-
-    // PXU TODO: Temp comment below check for test
-    /* if (prev_ss_->HasSegmentFile(context_.field_name, context_.field_element_name, context_.segment_id)) { */
-    /*     status_ = OP_FAIL_DUPLICATED; */
-    /*     return; */
-    /* } */
-
-    std::any_cast<SegmentFilePtr>(steps_[0])->Activate();
-    std::any_cast<SegmentCommitPtr>(steps_[1])->Activate();
-    std::any_cast<PartitionCommitPtr>(steps_[2])->Activate();
-    std::any_cast<CollectionCommitPtr>(steps_[3])->Activate();
-    return Status::OK();
 }
 
 Status
@@ -111,6 +87,7 @@ BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentF
     if (!status.ok())
         return status;
     context_.new_segment_files.push_back(created);
+    AddStep(*created);
     return status;
 }
 
