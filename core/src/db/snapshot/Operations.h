@@ -100,6 +100,12 @@ class Operations : public std::enable_shared_from_this<Operations> {
         return status_;
     }
 
+    std::string OperationName() const {
+        return typeid(*this).name();
+    }
+
+    virtual std::string ToString() const;
+
     virtual ~Operations() {
     }
 

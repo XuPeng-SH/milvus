@@ -481,6 +481,7 @@ TEST_F(SnapshotTest, OperationTest) {
         status = build_op->Push();
         std::cout << status.ToString() << std::endl;
         ASSERT_TRUE(!status.ok());
+        ASSERT_TRUE(!(build_op->GetStatus()).ok());
     }
     milvus::engine::snapshot::Snapshots::GetInstance().Reset();
 }

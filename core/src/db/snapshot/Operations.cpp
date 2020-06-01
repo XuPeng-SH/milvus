@@ -11,6 +11,7 @@
 
 #include "db/snapshot/Operations.h"
 #include <chrono>
+#include <sstream>
 #include "db/snapshot/OperationExecutor.h"
 #include "db/snapshot/Snapshots.h"
 
@@ -29,6 +30,17 @@ Operations::Operations(const OperationContext& context, ID_TYPE collection_id, I
     auto status = Snapshots::GetInstance().GetSnapshot(prev_ss_, collection_id, commit_id);
     if (!status.ok())
         prev_ss_ = ScopedSnapshotT();
+}
+
+std::string
+Operations::ToString() const {
+    std::stringstream ss;
+    ss << "<" << OperationName() << ":" << GetID() << ">";
+    ss << (done_ ? " | DONE" : " | PENDING");
+    if (done_) {
+        ss << " | " << status_.ToString();
+    }
+    return ss.str();
 }
 
 ID_TYPE
