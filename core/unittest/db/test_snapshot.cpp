@@ -429,6 +429,7 @@ TEST_F(SnapshotTest, OperationTest) {
         ASSERT_TRUE(status.ok());
         status = op->Push();
         ASSERT_TRUE(status.ok());
+        std::cout << op->ToString() << std::endl;
         status = op->GetSnapshot(ss);
         ASSERT_TRUE(ss->GetID() > ss_id);
         ASSERT_TRUE(status.ok());
@@ -459,7 +460,6 @@ TEST_F(SnapshotTest, OperationTest) {
         auto new_sf_context = sf_context;
         new_sf_context.segment_id = new_seg_id;
         status = build_op->CommitNewSegmentFile(new_sf_context, seg_file);
-        std::cout << status.ToString() << std::endl;
         ASSERT_TRUE(!status.ok());
     }
 
@@ -475,13 +475,14 @@ TEST_F(SnapshotTest, OperationTest) {
         new_sf_context.segment_id = merge_seg->GetID();
         status = build_op->CommitNewSegmentFile(new_sf_context, seg_file);
         ASSERT_TRUE(status.ok());
+        std::cout << build_op->ToString() << std::endl;
 
         auto status = milvus::engine::snapshot::Snapshots::GetInstance().DropCollection(ss->GetName());
         ASSERT_TRUE(status.ok());
         status = build_op->Push();
-        std::cout << status.ToString() << std::endl;
         ASSERT_TRUE(!status.ok());
         ASSERT_TRUE(!(build_op->GetStatus()).ok());
+        std::cout << build_op->ToString() << std::endl;
     }
     milvus::engine::snapshot::Snapshots::GetInstance().Reset();
 }

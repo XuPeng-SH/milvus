@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <string>
 #include "ResourceOperations.h"
 #include "Snapshot.h"
 
@@ -30,6 +31,9 @@ class BuildOperation : public Operations {
 
     Status
     CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr& created);
+
+    std::string
+    OperationRepr() const override;
 
  protected:
     Status
@@ -67,6 +71,9 @@ class MergeOperation : public Operations {
     CommitNewSegment(SegmentPtr&);
     Status
     CommitNewSegmentFile(const SegmentFileContext& context, SegmentFilePtr&);
+
+    std::string
+    OperationRepr() const override;
 };
 
 class CreateCollectionOperation : public Operations {

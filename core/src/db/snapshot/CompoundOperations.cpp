@@ -11,6 +11,7 @@
 
 #include "db/snapshot/CompoundOperations.h"
 #include <memory>
+#include <sstream>
 #include "db/snapshot/OperationExecutor.h"
 #include "db/snapshot/Snapshots.h"
 
@@ -22,6 +23,29 @@ BuildOperation::BuildOperation(const OperationContext& context, ScopedSnapshotT 
 }
 BuildOperation::BuildOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id)
     : BaseT(context, collection_id, commit_id) {
+}
+
+std::string
+BuildOperation::OperationRepr() const {
+    std::stringstream ss;
+    ss << "<BO(SS=" << prev_ss_->GetID() << ",SEG=";
+    if (context_.new_segment_files.size() == 0) {
+        ss << "?";
+    } else {
+        ss << context_.new_segment_files[0]->GetSegmentId();
+        ss << ",NSF=[";
+        bool first = true;
+        for (auto& f : context_.new_segment_files) {
+            if (!first) {
+                ss << ",";
+            }
+            ss << f->GetID();
+            first = false;
+        }
+        ss << "]";
+    }
+    ss << ")>";
+    return ss.str();
 }
 
 Status
@@ -174,6 +198,44 @@ MergeOperation::MergeOperation(const OperationContext& context, ScopedSnapshotT 
 }
 MergeOperation::MergeOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id)
     : BaseT(context, collection_id, commit_id) {
+}
+
+std::string
+MergeOperation::OperationRepr() const {
+    std::stringstream ss;
+    ss << "<MO(SS=" << prev_ss_->GetID() << ",SSEG=[";
+    {
+        bool first = true;
+        for (auto& r : context_.stale_segments) {
+            if (!first) {
+                ss << ",";
+            }
+            ss << r->GetID();
+            first = false;
+        }
+    }
+    ss << "]";
+    ss << ",NSEG=";
+    if (context_.new_segment) {
+        ss << context_.new_segment->GetID();
+    } else {
+        ss << "?";
+    }
+    ss << ",NSF=[";
+    {
+        bool first = true;
+        for (auto& f : context_.new_segment_files) {
+            if (!first) {
+                ss << ",";
+            }
+            ss << f->GetID();
+            first = false;
+        }
+    }
+    ss << "]";
+
+    ss << ")>";
+    return ss.str();
 }
 
 Status

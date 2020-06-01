@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
 #include "Context.h"
@@ -100,16 +101,25 @@ class Operations : public std::enable_shared_from_this<Operations> {
         return status_;
     }
 
-    std::string OperationName() const {
+    std::string
+    OperationName() const {
         return typeid(*this).name();
     }
+    virtual std::string
+    OperationRepr() const;
 
-    virtual std::string ToString() const;
+    virtual std::string
+    ToString() const;
 
     virtual ~Operations() {
     }
 
  protected:
+    virtual std::string
+    SuccessString() const;
+    virtual std::string
+    FailureString() const;
+
     Status
     DoneRequired() const;
     Status

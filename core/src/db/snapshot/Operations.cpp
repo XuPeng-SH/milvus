@@ -33,12 +33,33 @@ Operations::Operations(const OperationContext& context, ID_TYPE collection_id, I
 }
 
 std::string
-Operations::ToString() const {
+Operations::SuccessString() const {
+    return status_.ToString();
+}
+
+std::string
+Operations::FailureString() const {
+    return status_.ToString();
+}
+
+std::string
+Operations::OperationRepr() const {
     std::stringstream ss;
     ss << "<" << OperationName() << ":" << GetID() << ">";
+    return ss.str();
+}
+
+std::string
+Operations::ToString() const {
+    std::stringstream ss;
+    ss << OperationRepr();
     ss << (done_ ? " | DONE" : " | PENDING");
     if (done_) {
-        ss << " | " << status_.ToString();
+        if (status_.ok()) {
+            ss << " | " << SuccessString();
+        } else {
+            ss << " | " << FailureString();
+        }
     }
     return ss.str();
 }
@@ -69,6 +90,7 @@ void
 Operations::Done() {
     std::unique_lock<std::mutex> lock(finish_mtx_);
     done_ = true;
+    std::cout << ToString() << std::endl;
     finish_cond_.notify_all();
 }
 
@@ -149,6 +171,7 @@ Operations::GetSnapshot(ScopedSnapshotT& ss) const {
 
 Status
 Operations::ApplyToStore(Store& store) {
+    std::cout << ToString() << std::endl;
     if (done_) {
         Done();
         return status_;
