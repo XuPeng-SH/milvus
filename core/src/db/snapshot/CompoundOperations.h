@@ -64,8 +64,6 @@ class MergeOperation : public Operations {
     MergeOperation(const OperationContext& context, ID_TYPE collection_id, ID_TYPE commit_id = 0);
 
     Status
-    PreExecute(Store&) override;
-    Status
     DoExecute(Store&) override;
 
     Status

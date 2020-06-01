@@ -194,11 +194,14 @@ MergeOperation::CommitNewSegment(SegmentPtr& created) {
         return status;
     }
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
-    op->Push();
+    status = op->Push();
+    if (!status.ok())
+        return status;
     status = op->GetResource(context_.new_segment);
     if (!status.ok())
         return status;
     created = context_.new_segment;
+    AddStep(*created);
     return status;
 }
 
@@ -213,69 +216,56 @@ MergeOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentF
     c.segment_id = new_segment->GetID();
     c.partition_id = new_segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
-    new_sf_op->Push();
+    status = new_sf_op->Push();
+    if (!status.ok())
+        return status;
     status = new_sf_op->GetResource(created);
     if (!status.ok())
         return status;
     context_.new_segment_files.push_back(created);
+    AddStep(*created);
     return status;
 }
 
 Status
-MergeOperation::PreExecute(Store& store) {
+MergeOperation::DoExecute(Store& store) {
     // PXU TODO:
     // 1. Check all requried field elements have related segment files
     // 2. Check Stale and others
     SegmentCommitOperation op(context_, prev_ss_);
-    op(store);
-    auto status = op.GetResource(context_.new_segment_commit);
+    auto status = op(store);
     if (!status.ok())
         return status;
+
+    status = op.GetResource(context_.new_segment_commit);
+    if (!status.ok())
+        return status;
+    AddStep(*context_.new_segment_commit);
 
     // PXU TODO: Check stale segments
 
     PartitionCommitOperation pc_op(context_, prev_ss_);
-    pc_op(store);
+    status = pc_op(store);
+    if (!status.ok())
+        return status;
 
     OperationContext cc_context;
     status = pc_op.GetResource(cc_context.new_partition_commit);
     if (!status.ok())
         return status;
+    AddStep(*cc_context.new_partition_commit);
+
     CollectionCommitOperation cc_op(cc_context, prev_ss_);
-    cc_op(store);
-
-    for (auto& new_segment_file : context_.new_segment_files) {
-        AddStep(*new_segment_file);
-    }
-    AddStep(*context_.new_segment);
-    AddStep(*context_.new_segment_commit);
-
-    PartitionCommitPtr pc;
-    status = pc_op.GetResource(pc);
+    status = cc_op(store);
     if (!status.ok())
         return status;
-
     CollectionCommitPtr cc;
     status = cc_op.GetResource(cc);
     if (!status.ok())
         return status;
-
-    AddStep(*pc);
     AddStep(*cc);
-    return Status::OK();
-}
 
-Status
-MergeOperation::DoExecute(Store& store) {
-    auto i = 0;
-    for (; i < context_.new_segment_files.size(); ++i) {
-        std::any_cast<SegmentFilePtr>(steps_[i])->Activate();
-    }
-    std::any_cast<SegmentPtr>(steps_[i++])->Activate();
-    std::any_cast<SegmentCommitPtr>(steps_[i++])->Activate();
-    std::any_cast<PartitionCommitPtr>(steps_[i++])->Activate();
-    std::any_cast<CollectionCommitPtr>(steps_[i++])->Activate();
-    return Status::OK();
+    return status;
 }
 
 GetSnapshotIDsOperation::GetSnapshotIDsOperation(ID_TYPE collection_id, bool reversed)
