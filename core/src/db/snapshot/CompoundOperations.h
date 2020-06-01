@@ -47,9 +47,6 @@ class NewSegmentOperation : public Operations {
     DoExecute(Store&) override;
 
     Status
-    PreExecute(Store&) override;
-
-    Status
     CommitNewSegment(SegmentPtr& created);
 
     Status

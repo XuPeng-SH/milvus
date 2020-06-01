@@ -100,19 +100,6 @@ NewSegmentOperation::NewSegmentOperation(const OperationContext& context, ID_TYP
 
 Status
 NewSegmentOperation::DoExecute(Store& store) {
-    auto i = 0;
-    for (; i < context_.new_segment_files.size(); ++i) {
-        std::any_cast<SegmentFilePtr>(steps_[i])->Activate();
-    }
-    std::any_cast<SegmentPtr>(steps_[i++])->Activate();
-    std::any_cast<SegmentCommitPtr>(steps_[i++])->Activate();
-    std::any_cast<PartitionCommitPtr>(steps_[i++])->Activate();
-    std::any_cast<CollectionCommitPtr>(steps_[i++])->Activate();
-    return Status::OK();
-}
-
-Status
-NewSegmentOperation::PreExecute(Store& store) {
     // PXU TODO:
     // 1. Check all requried field elements have related segment files
     // 2. Check Stale and others
@@ -120,48 +107,49 @@ NewSegmentOperation::PreExecute(Store& store) {
     /* if (!status.ok()) return status; */
     // TODO: Check Context
     SegmentCommitOperation op(context_, prev_ss_);
-    op(store);
-    auto status = op.GetResource(context_.new_segment_commit);
+    auto status = op(store);
     if (!status.ok())
         return status;
-
-    PartitionCommitOperation pc_op(context_, prev_ss_);
-    pc_op(store);
-
-    OperationContext cc_context;
-    status = pc_op.GetResource(cc_context.new_partition_commit);
-    CollectionCommitOperation cc_op(cc_context, prev_ss_);
-    cc_op(store);
-
-    for (auto& new_segment_file : context_.new_segment_files) {
-        AddStep(*new_segment_file);
-    }
-    AddStep(*context_.new_segment);
+    status = op.GetResource(context_.new_segment_commit);
+    if (!status.ok())
+        return status;
     AddStep(*context_.new_segment_commit);
 
-    PartitionCommitPtr pc;
-    status = pc_op.GetResource(pc);
+    OperationContext cc_context;
+
+    PartitionCommitOperation pc_op(context_, prev_ss_);
+    status = pc_op(store);
     if (!status.ok())
         return status;
+    status = pc_op.GetResource(cc_context.new_partition_commit);
+    if (!status.ok())
+        return status;
+    AddStep(*cc_context.new_partition_commit);
 
+    CollectionCommitOperation cc_op(cc_context, prev_ss_);
+    status = cc_op(store);
+    if (!status.ok())
+        return status;
     CollectionCommitPtr cc;
     status = cc_op.GetResource(cc);
     if (!status.ok())
         return status;
-
-    AddStep(*pc);
     AddStep(*cc);
+
     return status;
 }
 
 Status
 NewSegmentOperation::CommitNewSegment(SegmentPtr& created) {
     auto op = std::make_shared<SegmentOperation>(context_, prev_ss_);
-    op->Push();
-    auto status = op->GetResource(context_.new_segment);
+    auto status = op->Push();
+    if (!status.ok())
+        return status;
+    status = op->GetResource(context_.new_segment);
     if (!status.ok())
         return status;
     created = context_.new_segment;
+    AddStep(*created);
     return status;
 }
 
@@ -171,11 +159,13 @@ NewSegmentOperation::CommitNewSegmentFile(const SegmentFileContext& context, Seg
     c.segment_id = context_.new_segment->GetID();
     c.partition_id = context_.new_segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(c, prev_ss_);
-    new_sf_op->Push();
-    auto status = new_sf_op->GetResource(created);
+    auto status = new_sf_op->Push();
     if (!status.ok())
         return status;
-
+    status = new_sf_op->GetResource(created);
+    if (!status.ok())
+        return status;
+    AddStep(*created);
     context_.new_segment_files.push_back(created);
     return status;
 }
