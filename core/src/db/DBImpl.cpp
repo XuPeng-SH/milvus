@@ -3507,7 +3507,7 @@ DBImpl::SSTODOPreloadCollection(const std::shared_ptr<server::Context>& context,
     }
 
     auto handler = std::make_shared<LoadVectorFieldHandler>(context, ss);
-    ss->IterateResources<snapshot::Field>(handler);
+    handler->Iterate();
 
     return handler->GetStatus();
 }
