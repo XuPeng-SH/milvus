@@ -75,6 +75,7 @@ BuildOperation::CommitNewSegmentFile(const SegmentFileContext& context, SegmentF
         emsg << GetRepr() << ". Invalid segment " << context.segment_id << " in context";
         return Status(SS_INVALID_CONTEX_ERROR, emsg.str());
     }
+
     auto ctx = context;
     ctx.partition_id = segment->GetPartitionId();
     auto new_sf_op = std::make_shared<SegmentFileOperation>(ctx, GetStartedSS());
@@ -123,6 +124,11 @@ DropAllIndexOperation::DoExecute(Store& store) {
         STATUS_CHECK(fc_op.GetResource(new_field_commit));
         AddStepWithLsn(*new_field_commit, context.lsn);
         context.new_field_commits.push_back(new_field_commit);
+        for (auto& kv : GetAdjustedSS()->GetResources<FieldCommit>()) {
+            if (kv.second->GetFieldId() == new_field_commit->GetFieldId()) {
+                context.stale_field_commits.push_back(kv.second.Get());
+            }
+        }
 
         SchemaCommitOperation sc_op(context, GetAdjustedSS());
 

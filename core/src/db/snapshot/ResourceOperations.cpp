@@ -221,17 +221,13 @@ SegmentCommitOperation::PreCheck() {
     return Status::OK();
 }
 
-SegmentFileOperation::SegmentFileOperation(const SegmentFileContext& sc, ScopedSnapshotT prev_ss)
-    : BaseT(OperationContext(), prev_ss), context_(sc) {
-}
-
 FieldCommitOperation::FieldCommitOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
     : BaseT(context, prev_ss) {
 }
 
 FieldCommit::Ptr
 FieldCommitOperation::GetPrevResource() const {
-    auto get_resource = [&] (FieldElementPtr fe) -> FieldCommitPtr {
+    auto get_resource = [&](FieldElementPtr fe) -> FieldCommitPtr {
         auto& field_commits = GetStartedSS()->GetResources<FieldCommit>();
         for (auto& kv : field_commits) {
             if (kv.second->GetFieldId() == fe->GetFieldId()) {
@@ -257,19 +253,15 @@ FieldCommitOperation::DoExecute(Store& store) {
         resource_ = std::make_shared<FieldCommit>(*prev_resource);
         resource_->SetID(0);
         resource_->ResetStatus();
-        if (context_.stale_field_elements.size() > 0) {
-            for (auto& fe : context_.stale_field_elements) {
-                resource_->GetMappings().erase(fe->GetID());
-            }
+        for (auto& fe : context_.stale_field_elements) {
+            resource_->GetMappings().erase(fe->GetID());
         }
     } else {
         // TODO
     }
 
-    if (context_.new_field_elements.size() > 0) {
-        for (auto& fe : context_.new_field_elements) {
-            resource_->GetMappings().insert(fe->GetID());
-        }
+    for (auto& fe : context_.new_field_elements) {
+        resource_->GetMappings().insert(fe->GetID());
     }
 
     AddStep(*resource_, false);
@@ -288,7 +280,7 @@ SchemaCommitOperation::GetPrevResource() const {
 Status
 SchemaCommitOperation::DoExecute(Store& store) {
     auto prev_resource = GetPrevResource();
-    if  (!prev_resource) {
+    if (!prev_resource) {
         return Status(SS_INVALID_CONTEX_ERROR, "Cannot get schema commit");
     }
 
@@ -307,9 +299,19 @@ SchemaCommitOperation::DoExecute(Store& store) {
     return Status::OK();
 }
 
+SegmentFileOperation::SegmentFileOperation(const SegmentFileContext& sc, ScopedSnapshotT prev_ss)
+    : BaseT(OperationContext(), prev_ss), context_(sc) {
+}
+
 Status
 SegmentFileOperation::DoExecute(Store& store) {
     auto field_element_id = GetStartedSS()->GetFieldElementId(context_.field_name, context_.field_element_name);
+    if (field_element_id == 0) {
+        std::stringstream emsg;
+        emsg << GetRepr() << ". Invalid field name: \"" << context_.field_name;
+        emsg << "\" or field element name: \"" << context_.field_element_name << "";
+        return Status(SS_INVALID_CONTEX_ERROR, emsg.str());
+    }
     resource_ = std::make_shared<SegmentFile>(context_.collection_id, context_.partition_id, context_.segment_id,
                                               field_element_id);
     AddStep(*resource_, false);
