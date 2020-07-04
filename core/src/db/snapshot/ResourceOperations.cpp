@@ -42,7 +42,8 @@ CollectionCommitOperation::DoExecute(Store& store) {
         for (auto& pc : context_.new_partition_commits) {
             handle_new_pc(pc);
         }
-    } else if (context_.new_schema_commit) {
+    }
+    if (context_.new_schema_commit) {
         resource_->SetSchemaId(context_.new_schema_commit->GetID());
     }
     resource_->SetID(0);
@@ -222,6 +223,88 @@ SegmentCommitOperation::PreCheck() {
 
 SegmentFileOperation::SegmentFileOperation(const SegmentFileContext& sc, ScopedSnapshotT prev_ss)
     : BaseT(OperationContext(), prev_ss), context_(sc) {
+}
+
+FieldCommitOperation::FieldCommitOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
+    : BaseT(context, prev_ss) {
+}
+
+FieldCommit::Ptr
+FieldCommitOperation::GetPrevResource() const {
+    auto get_resource = [&] (FieldElementPtr fe) -> FieldCommitPtr {
+        auto& field_commits = GetStartedSS()->GetResources<FieldCommit>();
+        for (auto& kv : field_commits) {
+            if (kv.second->GetFieldId() == fe->GetFieldId()) {
+                return kv.second.Get();
+            }
+        }
+        return nullptr;
+    };
+
+    if (context_.new_field_elements.size() > 0) {
+        return get_resource(context_.new_field_elements[0]);
+    } else if (context_.stale_field_elements.size() > 0) {
+        return get_resource(context_.stale_field_elements[0]);
+    }
+    return nullptr;
+}
+
+Status
+FieldCommitOperation::DoExecute(Store& store) {
+    auto prev_resource = GetPrevResource();
+
+    if (prev_resource) {
+        resource_ = std::make_shared<FieldCommit>(*prev_resource);
+        resource_->SetID(0);
+        resource_->ResetStatus();
+        if (context_.stale_field_elements.size() > 0) {
+            for (auto& fe : context_.stale_field_elements) {
+                resource_->GetMappings().erase(fe->GetID());
+            }
+        }
+    } else {
+        // TODO
+    }
+
+    if (context_.new_field_elements.size() > 0) {
+        for (auto& fe : context_.new_field_elements) {
+            resource_->GetMappings().insert(fe->GetID());
+        }
+    }
+
+    AddStep(*resource_, false);
+    return Status::OK();
+}
+
+SchemaCommitOperation::SchemaCommitOperation(const OperationContext& context, ScopedSnapshotT prev_ss)
+    : BaseT(context, prev_ss) {
+}
+
+SchemaCommit::Ptr
+SchemaCommitOperation::GetPrevResource() const {
+    return GetStartedSS()->GetSchemaCommit();
+}
+
+Status
+SchemaCommitOperation::DoExecute(Store& store) {
+    auto prev_resource = GetPrevResource();
+    if  (!prev_resource) {
+        return Status(SS_INVALID_CONTEX_ERROR, "Cannot get schema commit");
+    }
+
+    resource_ = std::make_shared<SchemaCommit>(*prev_resource);
+    resource_->SetID(0);
+    resource_->ResetStatus();
+    for (auto& fc : context_.stale_field_commits) {
+        resource_->GetMappings().erase(fc->GetID());
+    }
+
+    for (auto& fc : context_.new_field_commits) {
+        resource_->GetMappings().insert(fc->GetID());
+    }
+
+    AddStep(*resource_, false);
+    return Status::OK();
 }
 
 Status
