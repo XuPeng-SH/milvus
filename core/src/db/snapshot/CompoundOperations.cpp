@@ -922,7 +922,8 @@ CreateCollectionOperation::DoExecute(StorePtr store) {
         MappingT element_ids = {};
         FieldElementPtr raw_element;
         status = store->CreateResource<FieldElement>(
-            FieldElement(collection->GetID(), field->GetID(), DEFAULT_RAW_DATA_NAME, FieldElementType::FET_RAW),
+            FieldElement(collection->GetID(), field->GetID(), DEFAULT_RAW_DATA_NAME, FieldElementType::FET_RAW,
+                DEFAULT_RAW_DATA_NAME),
             raw_element);
         auto fe_ctx_p = ResourceContextBuilder<FieldElement>().SetOp(meta::oUpdate).CreatePtr();
         AddStepWithLsn(*raw_element, c_context_.lsn, fe_ctx_p);
@@ -931,7 +932,9 @@ CreateCollectionOperation::DoExecute(StorePtr store) {
             FieldElementPtr element;
             status =
                 store->CreateResource<FieldElement>(FieldElement(collection->GetID(), field->GetID(),
-                                                                 element_schema->GetName(), element_schema->GetFtype()),
+                                                                 element_schema->GetName(),
+                                                                 element_schema->GetFtype(),
+                                                                 element_schema->GetTypeName()),
                                                     element);
             auto t_fe_ctx_p = ResourceContextBuilder<FieldElement>().SetOp(meta::oUpdate).CreatePtr();
             AddStepWithLsn(*element, c_context_.lsn, t_fe_ctx_p);

@@ -628,6 +628,8 @@ TEST_F(SnapshotTest, OperationTest) {
     auto ss = CreateCollection(collection_name, ++lsn);
     ASSERT_TRUE(ss);
 
+    std::cout << ss->ToString() << std::endl;
+
     SegmentFileContext sf_context;
     SFContextBuilder(sf_context, ss);
 
