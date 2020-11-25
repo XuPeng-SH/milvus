@@ -41,8 +41,10 @@ class MetaAdapter {
         auto status = session->Select<T, snapshot::ID_TYPE>(snapshot::IdField::Name, {id}, {}, resources);
         if (status.ok() && !resources.empty()) {
             // TODO: may need to check num of resources
-            resource = resources.at(0);
+            /* resource = resources.at(0); */
+            resource = std::move(resources[0]);
         }
+        resources.clear();
 
         return status;
     }

@@ -56,7 +56,6 @@ Snapshots::DoDropCollection(ScopedSnapshotT& ss, const LSN_TYPE& lsn) {
         inactive_holders_[h->first] = h->second;
         holders_.erase(h);
     }
-    std::cout << inactive_holders_.size() << std::endl;
     return status;
 }
 

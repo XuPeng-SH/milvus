@@ -15,6 +15,7 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 namespace milvus::engine::snapshot {
 
@@ -22,11 +23,22 @@ using OnNoRefCBF = std::function<void(void)>;
 
 class ReferenceProxy {
  public:
-    ReferenceProxy() = default;
-    virtual ~ReferenceProxy() = default;
+    ReferenceProxy() {
+        ++CC;
+        std::cout << "[CON] CC: " << CC << " DC: " << DC << std::endl;
+    }
+    virtual ~ReferenceProxy() {
+        /* std::cout << "RC: " << ref_count_ << " CBS: " << on_no_ref_cbs_.size() << std::endl; */
+        ++DC;
+        std::cout << "[DES] CC: " << CC << " DC: " << DC << std::endl;
+        /* on_no_ref_cbs_.clear(); */
+    }
+    /* virtual ~ReferenceProxy() = default; */
 
     // TODO: Copy constructor is used in Mock Test. Should never be used. To be removed
     ReferenceProxy(const ReferenceProxy& o) {
+        ++CC;
+        std::cout << "[CCON] CC: " << CC << " DC: " << DC << std::endl;
         ref_count_ = 0;
     }
 
@@ -44,6 +56,7 @@ class ReferenceProxy {
             for (auto& cb : on_no_ref_cbs_) {
                 cb();
             }
+            on_no_ref_cbs_.clear();
         }
     }
 
@@ -65,7 +78,16 @@ class ReferenceProxy {
  protected:
     std::atomic<int64_t> ref_count_ = {0};
     std::vector<OnNoRefCBF> on_no_ref_cbs_;
+    static std::atomic_uint32_t CC;
+    static std::atomic_uint32_t DC;
 };
+
+inline
+std::atomic_uint32_t
+ReferenceProxy::CC = 0;
+inline
+std::atomic_uint32_t
+ReferenceProxy::DC = 0;
 
 using ReferenceResourcePtr = std::shared_ptr<ReferenceProxy>;
 
