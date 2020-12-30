@@ -19,7 +19,6 @@
 #include "db/snapshot/ResourceContext.h"
 #include "db/snapshot/ResourceHelper.h"
 #include "db/snapshot/ResourceTypes.h"
-#include "db/snapshot/Context.h"
 #include "db/snapshot/Resources.h"
 #include "db/snapshot/Utils.h"
 #include "segment/Segment.h"
@@ -184,19 +183,16 @@ class Store : public std::enable_shared_from_this<Store> {
     template <typename ResourceT>
     Status
     GetActiveResourcesByAttrs(std::vector<typename ResourceT::Ptr>& return_vs,
-                              const std::vector<std::string>& target_attrs, snapshot::RangeContext range) {
+                              const std::vector<std::string>& target_attrs, int64_t upper_bound, int64_t low_bound) {
         std::vector<State> filter_states = {State::ACTIVE};
         auto relation = meta::ONE_(meta::Range_<ResourceT, StateField>(meta::Range::EQ, State::ACTIVE));
-        if (range.IsActive()) {
-            if (range.upper_bound_ < std::numeric_limits<TS_TYPE>::max()) {
-                relation = meta::AND_(relation, meta::Range_<ResourceT, UpdatedOnField>(meta::Range::LTE, range.upper_bound_));
-            }
-            if (range.low_bound_ > std::numeric_limits<TS_TYPE>::min()) {
-                relation = meta::AND_(relation, meta::Range_<ResourceT, UpdatedOnField>(meta::Range::GTE, range.low_bound_));
-            }
+        if (upper_bound < std::numeric_limits<TS_TYPE>::max()) {
+            relation = meta::AND_(relation, meta::Range_<ResourceT, UpdatedOnField>(meta::Range::LTE, upper_bound));
+        }
+        if (low_bound > std::numeric_limits<TS_TYPE>::min()) {
+            relation = meta::AND_(relation, meta::Range_<ResourceT, UpdatedOnField>(meta::Range::GTE, low_bound));
         }
         return adapter_->Query<ResourceT>(relation, return_vs);
-        // return adapter_->SelectByAttrs<ResourceT>(StateField::Name, filter_states, target_attrs, return_vs);
     }
 
     template <typename ResourceT>

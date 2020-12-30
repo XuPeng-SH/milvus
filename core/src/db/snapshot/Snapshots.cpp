@@ -28,6 +28,7 @@ namespace milvus::engine::snapshot {
 
 static constexpr int DEFAULT_READER_TIMER_INTERVAL_US = 100 * 1000;
 static constexpr int DEFAULT_WRITER_TIMER_INTERVAL_US = 2000 * 1000;
+static constexpr int DEFAULT_REFRESH_INTERVAL_TIMES_READER = 1000;
 
 Status
 Snapshots::DropCollection(ID_TYPE collection_id, const LSN_TYPE& lsn) {
@@ -250,6 +251,12 @@ Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
     TimeRecorder rc("OnReaderTimer-TimeRecorder", 3);
     std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
     RangeContext ctx;
+    if (times_from_last_ <= DEFAULT_REFRESH_INTERVAL_TIMES_READER) {
+        ctx.low_bound_ = latest_updated_;
+        times_from_last_++;
+    } else {
+        times_from_last_ = 1;
+    }
     auto op = std::make_shared<GetAllActiveSnapshotIDsOperation>(ctx);
     auto status = (*op)(store_);
     if (!status.ok()) {
@@ -264,16 +271,19 @@ Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
         return;
     }
     auto ids = op->GetIDs();
+    auto updated = op->GetLatestUpdatedTime();
+    /* latest_updated_ = (latest_updated_ > op->GetLatestUpdatedTime()) ? latest_updated_ : op->GetLatestUpdatedTime(); */
+    latest_updated_ = std::max(updated, latest_updated_.load());
+    LOG_SERVER_WARNING_ << "GetLatestUpdatedTime=" << latest_updated_;
     ScopedSnapshotT ss;
     std::set<ID_TYPE> alive_cids;
     std::set<ID_TYPE> this_invalid_cids;
     bool diff_found = false;
 
-    rc.RecordSection("GetAllActiveSnapshotIDsOperation");
-    LOG_SERVER_WARNING_ << ">>>>>>>>>>>>>>>>>>>>>>------------------------";
+    rc.RecordSection(std::string("GetAllActiveSnapshotIDsOperation ") + std::to_string(ids.size()));
     for (auto& [cid, ccid] : ids) {
         status = LoadSnapshot(store_, ss, cid, ccid);
-        rc.RecordSection(std::string("cid=") + std::to_string(cid) + " ccid=" + std::to_string(ccid));
+        /* rc.RecordSection(std::string("cid=") + std::to_string(cid) + " ccid=" + std::to_string(ccid)); */
         if (status.code() == SS_NOT_ACTIVE_ERROR) {
             auto found_it = invalid_ssid_.find(ccid);
             this_invalid_cids.insert(ccid);
@@ -290,7 +300,6 @@ Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
         }
     }
     rc.ElapseFromBegin("Post Processing");
-    LOG_SERVER_WARNING_ << "-------------------------<<<<<<<<<<<<<<<<<<<<<";
 
     if (diff_found) {
         LOG_SERVER_ERROR_ << "Total " << this_invalid_cids.size() << " invalid SS found!";
@@ -357,8 +366,8 @@ Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
         std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start)
             .count();
     if (exe_time > DEFAULT_READER_TIMER_INTERVAL_US) {
-        LOG_ENGINE_WARNING_ << "OnReaderTimer takes too much time: " << exe_time << " us";
     }
+    LOG_ENGINE_WARNING_ << "OnReaderTimer takes overall time: " << exe_time << " us";
 }
 
 void

@@ -943,11 +943,12 @@ GetAllActiveSnapshotIDsOperation::GetAllActiveSnapshotIDsOperation(const RangeCo
 Status
 GetAllActiveSnapshotIDsOperation::DoExecute(StorePtr store) {
     std::vector<CollectionCommitPtr> ccs;
-    if (updated_time_range_.IsActive()) {
-    } else {
-        STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID}, updated_time_range_));
-        /* STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID})); */
-    }
+    LOG_ENGINE_WARNING_ << "Upper=" << updated_time_range_.upper_bound_ << " Lower=" << updated_time_range_.low_bound_;
+    STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID},
+                updated_time_range_.upper_bound_,
+                updated_time_range_.low_bound_));
+    /* STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID})); */
+
     for (auto& cc : ccs) {
         auto cid = cc->GetCollectionId();
         auto it = cid_ccid_.find(cid);
@@ -956,6 +957,7 @@ GetAllActiveSnapshotIDsOperation::DoExecute(StorePtr store) {
         } else {
             cid_ccid_[cid] = std::max(it->second, cc->GetID());
         }
+        latest_update_ = std::max(latest_update_, cc->GetUpdatedTime());
     }
     return Status::OK();
 }
