@@ -20,6 +20,7 @@
 #include "db/snapshot/SnapshotPolicyFactory.h"
 #include "utils/CommonUtil.h"
 #include "utils/TimerContext.h"
+#include "utils/TimeRecorder.h"
 
 #include <utility>
 
@@ -246,8 +247,10 @@ Snapshots::GetHolderNoLock(ID_TYPE collection_id, SnapshotHolderPtr& holder) con
 
 void
 Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
+    TimeRecorder rc("OnReaderTimer-TimeRecorder", 3);
     std::chrono::time_point<std::chrono::system_clock> start = std::chrono::system_clock::now();
-    auto op = std::make_shared<GetAllActiveSnapshotIDsOperation>();
+    RangeContext ctx;
+    auto op = std::make_shared<GetAllActiveSnapshotIDsOperation>(ctx);
     auto status = (*op)(store_);
     if (!status.ok()) {
         LOG_SERVER_ERROR_ << "Snapshots::OnReaderTimer::GetAllActiveSnapshotIDsOperation failed: " << status.message();
@@ -265,8 +268,12 @@ Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
     std::set<ID_TYPE> alive_cids;
     std::set<ID_TYPE> this_invalid_cids;
     bool diff_found = false;
+
+    rc.RecordSection("GetAllActiveSnapshotIDsOperation");
+    LOG_SERVER_WARNING_ << ">>>>>>>>>>>>>>>>>>>>>>------------------------";
     for (auto& [cid, ccid] : ids) {
         status = LoadSnapshot(store_, ss, cid, ccid);
+        rc.RecordSection(std::string("cid=") + std::to_string(cid) + " ccid=" + std::to_string(ccid));
         if (status.code() == SS_NOT_ACTIVE_ERROR) {
             auto found_it = invalid_ssid_.find(ccid);
             this_invalid_cids.insert(ccid);
@@ -282,6 +289,8 @@ Snapshots::OnReaderTimer(const boost::system::error_code& ec) {
             alive_cids.insert(cid);
         }
     }
+    rc.ElapseFromBegin("Post Processing");
+    LOG_SERVER_WARNING_ << "-------------------------<<<<<<<<<<<<<<<<<<<<<";
 
     if (diff_found) {
         LOG_SERVER_ERROR_ << "Total " << this_invalid_cids.size() << " invalid SS found!";

@@ -936,15 +936,18 @@ GetSnapshotIDsOperation::GetIDs() const {
     return ids_;
 }
 
-GetAllActiveSnapshotIDsOperation::GetAllActiveSnapshotIDsOperation()
-    : BaseT(OperationContext(), ScopedSnapshotT(), OperationsType::O_Compound) {
+GetAllActiveSnapshotIDsOperation::GetAllActiveSnapshotIDsOperation(const RangeContext& context)
+    : BaseT(OperationContext(), ScopedSnapshotT(), OperationsType::O_Compound), updated_time_range_(context) {
 }
 
 Status
 GetAllActiveSnapshotIDsOperation::DoExecute(StorePtr store) {
     std::vector<CollectionCommitPtr> ccs;
-    STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID}));
-    /* STATUS_CHECK(store->GetActiveResources<CollectionCommit>(ccs)); */
+    if (updated_time_range_.IsActive()) {
+    } else {
+        STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID}, updated_time_range_));
+        /* STATUS_CHECK(store->GetActiveResourcesByAttrs<CollectionCommit>(ccs, {meta::F_ID, meta::F_COLLECTON_ID})); */
+    }
     for (auto& cc : ccs) {
         auto cid = cc->GetCollectionId();
         auto it = cid_ccid_.find(cid);

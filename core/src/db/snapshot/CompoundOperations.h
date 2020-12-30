@@ -331,7 +331,7 @@ class GetAllActiveSnapshotIDsOperation : public Operations {
  public:
     using BaseT = Operations;
 
-    GetAllActiveSnapshotIDsOperation();
+    GetAllActiveSnapshotIDsOperation(const RangeContext& context);
 
     Status DoExecute(StorePtr) override;
 
@@ -340,6 +340,7 @@ class GetAllActiveSnapshotIDsOperation : public Operations {
 
  protected:
     std::map<ID_TYPE, ID_TYPE> cid_ccid_;
+    RangeContext updated_time_range_;
 };
 
 class DropCollectionOperation : public CompoundBaseOperation<DropCollectionOperation> {

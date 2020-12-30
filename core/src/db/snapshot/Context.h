@@ -25,6 +25,14 @@ namespace milvus {
 namespace engine {
 namespace snapshot {
 
+struct RangeContext {
+    bool active_ = false;
+    TS_TYPE upper_bound_ = std::numeric_limits<TS_TYPE>::min();
+    TS_TYPE low_bound_ = std::numeric_limits<TS_TYPE>::max();
+    bool
+    IsActive() const;
+};
+
 struct PartitionContext {
     std::string name;
     ID_TYPE id = 0;
