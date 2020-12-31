@@ -18,11 +18,6 @@ namespace snapshot {
 
 static constexpr const char* INNER_DELIMITER = ":";
 
-bool
-RangeContext::IsActive() const {
-    return active_ && (low_bound_ <= upper_bound_);
-}
-
 std::string
 PartitionContext::ToString() const {
     std::stringstream ss;

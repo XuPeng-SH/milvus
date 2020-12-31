@@ -26,11 +26,8 @@ namespace engine {
 namespace snapshot {
 
 struct RangeContext {
-    bool active_ = false;
     TS_TYPE upper_bound_ = std::numeric_limits<TS_TYPE>::max();
     TS_TYPE low_bound_ = std::numeric_limits<TS_TYPE>::min();
-    bool
-    IsActive() const;
 };
 
 struct PartitionContext {
